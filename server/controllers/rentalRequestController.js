@@ -488,6 +488,13 @@ const deleteRentalRequest = async (req, res) => {
   }
 };
 
+const resetMemoryRentalRequests = (newRequests) => {
+  memoryRentalRequests = newRequests ? newRequests.map((r) => ({ ...r })) : [];
+  return memoryRentalRequests;
+};
+
+const getMemoryRentalRequests = () => memoryRentalRequests;
+
 module.exports = {
   createRentalRequest,
   getMyRentalRequests,
@@ -495,4 +502,6 @@ module.exports = {
   getRentalRequestById,
   updateRentalRequestStatus,
   deleteRentalRequest,
+  resetMemoryRentalRequests,
+  getMemoryRentalRequests,
 };

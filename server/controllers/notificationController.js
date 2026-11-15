@@ -329,6 +329,13 @@ const deleteNotification = async (req, res) => {
   }
 };
 
+const resetMemoryNotifications = (newNotifs) => {
+  memoryNotifications = newNotifs ? newNotifs.map((n) => ({ ...n })) : [];
+  return memoryNotifications;
+};
+
+const getMemoryNotifications = () => memoryNotifications;
+
 module.exports = {
   createAndEmitNotification,
   getMyNotifications,
@@ -336,4 +343,6 @@ module.exports = {
   markAsRead,
   markAllAsRead,
   deleteNotification,
+  resetMemoryNotifications,
+  getMemoryNotifications,
 };

@@ -9,6 +9,7 @@ const authRoutes = require("./routes/authRoutes");
 const propertyRoutes = require("./routes/propertyRoutes");
 const rentalRequestRoutes = require("./routes/rentalRequestRoutes");
 const notificationRoutes = require("./routes/notificationRoutes");
+const demoRoutes = require("./routes/demoRoutes");
 const { initSocket, getIO } = require("./socket");
 const { notFound, errorHandler } = require("./middleware/errorMiddleware");
 
@@ -100,6 +101,11 @@ app.use("/api/auth", authRoutes);
 app.use("/api/properties", propertyRoutes);
 app.use("/api/rental-requests", rentalRequestRoutes);
 app.use("/api/notifications", notificationRoutes);
+app.use("/api/demo", demoRoutes);
+app.post("/api/seed", (req, res, next) => {
+  req.url = "/seed";
+  demoRoutes(req, res, next);
+});
 
 // 404 & Central Error Handling
 app.use(notFound);

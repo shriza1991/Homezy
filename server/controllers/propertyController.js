@@ -440,6 +440,27 @@ const seedProperties = async (req, res) => {
   }
 };
 
+const resetMemoryProperties = (newProps) => {
+  memoryProperties = newProps
+    ? newProps.map((p, idx) => ({
+        ...p,
+        _id: p._id || `mem-${idx + 1}`,
+        id: p.id || idx + 1,
+        createdAt: p.createdAt || new Date().toISOString(),
+        updatedAt: p.updatedAt || new Date().toISOString(),
+      }))
+    : initialPropertiesSeed.map((p, idx) => ({
+        ...p,
+        _id: `mem-${idx + 1}`,
+        id: idx + 1,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      }));
+  return memoryProperties;
+};
+
+const getMemoryProperties = () => memoryProperties;
+
 module.exports = {
   getProperties,
   getPropertyById,
@@ -447,4 +468,7 @@ module.exports = {
   updateProperty,
   deleteProperty,
   seedProperties,
+  initialPropertiesSeed,
+  resetMemoryProperties,
+  getMemoryProperties,
 };

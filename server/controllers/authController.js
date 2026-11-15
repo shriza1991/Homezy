@@ -19,14 +19,50 @@ const createToken = (user) => {
   );
 };
 
+// Default canonical in-memory demo accounts for disconnected / test mode
+const defaultDemoUsers = [
+  {
+    _id: "demo-tenant-id",
+    id: "demo-tenant-id",
+    name: "Demo Tenant",
+    email: "tenant@homezy.com",
+    phone: "9876543210",
+    role: "tenant",
+    password: "password123",
+  },
+  {
+    _id: "demo-admin-id",
+    id: "demo-admin-id",
+    name: "Demo Admin",
+    email: "admin@homezy.com",
+    phone: "9876543211",
+    role: "admin",
+    password: "password123",
+  },
+  {
+    _id: "demo-owner-id",
+    id: "demo-owner-id",
+    name: "Demo Owner",
+    email: "owner@homezy.com",
+    phone: "9876543212",
+    role: "owner",
+    password: "password123",
+  },
+];
+
+let memoryUsers = defaultDemoUsers.map((u) => ({ ...u }));
+
+const resetMemoryUsers = (newUsers) => {
+  memoryUsers = newUsers
+    ? newUsers.map((u) => ({ ...u }))
+    : defaultDemoUsers.map((u) => ({ ...u }));
+  return memoryUsers;
+};
+
+const getMemoryUsers = () => memoryUsers;
+
 // Register User
 const registerUser = async (req, res) => {
-  if (mongoose.connection.readyState !== 1) {
-    return res.status(503).json({
-      message: "Database service is not connected. Please verify MongoDB Atlas configuration.",
-    });
-  }
-
   try {
     const { name, email, phone, role, password } = req.body;
 
@@ -39,34 +75,70 @@ const registerUser = async (req, res) => {
     const validRoles = ["tenant", "owner", "admin"];
     const userRole = role && validRoles.includes(role) ? role : "tenant";
 
-    // Check if user already exists
-    const existingUser = await User.findOne({ email });
+    if (mongoose.connection.readyState === 1) {
+      // Check if user already exists in MongoDB
+      const existingUser = await User.findOne({ email });
 
-    if (existingUser) {
+      if (existingUser) {
+        return res.status(400).json({
+          message: "User already exists",
+        });
+      }
+
+      // Hash password
+      const hashedPassword = await bcrypt.hash(password, 10);
+
+      // Create user
+      const user = await User.create({
+        name,
+        email,
+        phone,
+        role: userRole,
+        password: hashedPassword,
+      });
+
+      return res.status(201).json({
+        message: "User registered successfully",
+        user: {
+          id: user._id,
+          name: user.name,
+          email: user.email,
+          role: user.role,
+        },
+      });
+    }
+
+    // In-memory fallback when MongoDB is disconnected
+    const normalizedEmail = email.trim().toLowerCase();
+    const existingMem = memoryUsers.find(
+      (u) => u.email.toLowerCase() === normalizedEmail
+    );
+
+    if (existingMem) {
       return res.status(400).json({
         message: "User already exists",
       });
     }
 
-    // Hash password
-    const hashedPassword = await bcrypt.hash(password, 10);
-
-    // Create user
-    const user = await User.create({
+    const newUser = {
+      _id: "mem-user-" + Date.now(),
+      id: "mem-user-" + Date.now(),
       name,
-      email,
+      email: normalizedEmail,
       phone,
       role: userRole,
-      password: hashedPassword,
-    });
+      password,
+    };
+
+    memoryUsers.push(newUser);
 
     res.status(201).json({
-      message: "User registered successfully",
+      message: "User registered successfully (in-memory mode)",
       user: {
-        id: user._id,
-        name: user.name,
-        email: user.email,
-        role: user.role,
+        id: newUser._id,
+        name: newUser.name,
+        email: newUser.email,
+        role: newUser.role,
       },
     });
   } catch (error) {
@@ -79,12 +151,6 @@ const registerUser = async (req, res) => {
 
 // Login User
 const loginUser = async (req, res) => {
-  if (mongoose.connection.readyState !== 1) {
-    return res.status(503).json({
-      message: "Database service is not connected. Please verify MongoDB Atlas configuration.",
-    });
-  }
-
   try {
     const { email, password } = req.body;
 
@@ -94,20 +160,56 @@ const loginUser = async (req, res) => {
       });
     }
 
-    // Find user
-    const user = await User.findOne({ email });
+    const normalizedEmail = email.trim().toLowerCase();
 
-    if (!user) {
+    if (mongoose.connection.readyState === 1) {
+      // Find user in MongoDB
+      const user = await User.findOne({ email: normalizedEmail });
+
+      if (!user) {
+        return res.status(401).json({
+          message: "Invalid email or password",
+        });
+      }
+
+      // Compare password
+      const isPasswordValid = await bcrypt.compare(password, user.password);
+
+      if (!isPasswordValid) {
+        return res.status(401).json({
+          message: "Invalid email or password",
+        });
+      }
+
+      // Generate JWT
+      const token = createToken(user);
+
+      return res.json({
+        message: "Login successful",
+        token,
+        user: {
+          id: user._id,
+          name: user.name,
+          email: user.email,
+          role: user.role,
+        },
+      });
+    }
+
+    // In-memory fallback login
+    const memUser = memoryUsers.find(
+      (u) => u.email.toLowerCase() === normalizedEmail
+    );
+
+    if (!memUser) {
       return res.status(401).json({
         message: "Invalid email or password",
       });
     }
 
-    // Compare password
-    const isPasswordValid = await bcrypt.compare(
-      password,
-      user.password
-    );
+    const isPasswordValid =
+      memUser.password === password ||
+      (await bcrypt.compare(password, memUser.password).catch(() => false));
 
     if (!isPasswordValid) {
       return res.status(401).json({
@@ -115,17 +217,16 @@ const loginUser = async (req, res) => {
       });
     }
 
-    // Generate JWT
-    const token = createToken(user);
+    const token = createToken(memUser);
 
     res.json({
-      message: "Login successful",
+      message: "Login successful (in-memory mode)",
       token,
       user: {
-        id: user._id,
-        name: user.name,
-        email: user.email,
-        role: user.role,
+        id: memUser._id || memUser.id,
+        name: memUser.name,
+        email: memUser.email,
+        role: memUser.role,
       },
     });
   } catch (error) {
@@ -170,17 +271,18 @@ const getAdminData = async (req, res) => {
       });
     }
 
-    // Fallback response in disconnected mode
+    // Fallback response in in-memory mode
+    const safeUsers = memoryUsers.map(({ password: _, ...rest }) => rest);
     res.status(200).json({
-      message: "Admin overview (degraded mode)",
+      message: "Admin overview (in-memory mode)",
       stats: {
-        totalUsers: 1,
-        tenants: 0,
-        owners: 0,
-        admins: 1,
+        totalUsers: memoryUsers.length,
+        tenants: memoryUsers.filter((u) => u.role === "tenant").length,
+        owners: memoryUsers.filter((u) => u.role === "owner").length,
+        admins: memoryUsers.filter((u) => u.role === "admin").length,
         activeListings: 4,
       },
-      users: [req.user],
+      users: safeUsers,
     });
   } catch (error) {
     res.status(500).json({
@@ -191,8 +293,12 @@ const getAdminData = async (req, res) => {
 };
 
 module.exports = {
+  createToken,
   registerUser,
   loginUser,
   getMe,
   getAdminData,
+  resetMemoryUsers,
+  getMemoryUsers,
+  defaultDemoUsers,
 };
