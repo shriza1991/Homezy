@@ -1,11 +1,18 @@
+// Normalize base API URL to ensure it always ends with /api
+const normalizeApiUrl = (url) => {
+  if (!url || typeof url !== "string") return "";
+  const cleaned = url.trim().replace(/\/+$/, "");
+  return cleaned.endsWith("/api") ? cleaned : `${cleaned}/api`;
+};
+
 // Resolve backend API URL from window override, environment variable, or default to local backend
 const getBaseApiUrl = () => {
   if (typeof window !== "undefined" && window.__HOMEZY_API_URL__) {
-    return window.__HOMEZY_API_URL__.replace(/\/+$/, "");
+    return normalizeApiUrl(window.__HOMEZY_API_URL__);
   }
   const envUrl = typeof import.meta !== "undefined" && import.meta.env && import.meta.env.VITE_API_URL;
   if (envUrl) {
-    return envUrl.replace(/\/+$/, "");
+    return normalizeApiUrl(envUrl);
   }
   if (typeof window !== "undefined" && window.location && window.location.origin && !window.location.port.includes("5173")) {
     return `${window.location.origin}/api`;

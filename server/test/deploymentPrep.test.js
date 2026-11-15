@@ -242,5 +242,42 @@ describe("Homezy Deployment Preparation & Hardening Tests", () => {
       assert.equal(data.message, "Homezy API is running");
       assert.equal(data.version, "1.0.0");
     });
+
+    test("POST /api/auth/login succeeds with demo credentials", async () => {
+      const res = await fetch(`${baseUrl}/api/auth/login`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          email: "admin@homezy.com",
+          password: "password123",
+        }),
+      });
+      assert.equal(res.status, 200);
+      const data = await res.json();
+      assert.ok(data.token);
+      assert.equal(data.user.role, "admin");
+    });
+
+    test("POST /auth/login (root alias without /api) succeeds with demo credentials", async () => {
+      const res = await fetch(`${baseUrl}/auth/login`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          email: "admin@homezy.com",
+          password: "password123",
+        }),
+      });
+      assert.equal(res.status, 200);
+      const data = await res.json();
+      assert.ok(data.token);
+      assert.equal(data.user.role, "admin");
+    });
+
+    test("GET /properties (root alias without /api) returns property listings", async () => {
+      const res = await fetch(`${baseUrl}/properties`);
+      assert.equal(res.status, 200);
+      const data = await res.json();
+      assert.ok(Array.isArray(data.properties));
+    });
   });
 });

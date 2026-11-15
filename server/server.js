@@ -113,13 +113,27 @@ app.get("/api/health/ready", (req, res) => {
   });
 });
 
-// Application Routes
+// Application Routes (support both /api/* and root /* for deployment URL flexibility)
 app.use("/api/auth", authRoutes);
+app.use("/auth", authRoutes);
+
 app.use("/api/properties", propertyRoutes);
+app.use("/properties", propertyRoutes);
+
 app.use("/api/rental-requests", rentalRequestRoutes);
+app.use("/rental-requests", rentalRequestRoutes);
+
 app.use("/api/notifications", notificationRoutes);
+app.use("/notifications", notificationRoutes);
+
 app.use("/api/demo", demoRoutes);
+app.use("/demo", demoRoutes);
+
 app.post("/api/seed", blockInProduction, (req, res, next) => {
+  req.url = "/seed";
+  demoRoutes(req, res, next);
+});
+app.post("/seed", blockInProduction, (req, res, next) => {
   req.url = "/seed";
   demoRoutes(req, res, next);
 });
