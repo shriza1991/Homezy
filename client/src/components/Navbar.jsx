@@ -1,5 +1,6 @@
 import { Link } from "react-router-dom";
 import { useAuth } from "../hooks/useAuth";
+import NotificationBell from "./NotificationBell";
 
 function Navbar() {
   const { user, isAuthenticated, logout } = useAuth();
@@ -54,6 +55,9 @@ function Navbar() {
                   My Requests
                 </Link>
               )}
+
+              {/* Real-time Notifications Bell (M6) */}
+              <NotificationBell />
 
               <div className="flex items-center gap-2">
                 {user?.role && (

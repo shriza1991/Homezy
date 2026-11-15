@@ -1,6 +1,7 @@
 const mongoose = require("mongoose");
 const RentalRequest = require("../models/RentalRequest");
 const Property = require("../models/Property");
+const { createAndEmitNotification } = require("./notificationController");
 
 // In-memory store for test/disconnected mode
 let memoryRentalRequests = [];
@@ -70,6 +71,16 @@ const createRentalRequest = async (req, res) => {
         status: "Pending",
       });
 
+      // Notify administrator of new tenant application
+      createAndEmitNotification({
+        recipient: "admin",
+        sender: tenantId,
+        title: "New Rental Application",
+        message: `${tenantName} submitted an application for "${cleanTitle}".`,
+        type: "application_submitted",
+        relatedId: String(request._id),
+      }).catch(() => {});
+
       return res.status(201).json({
         success: true,
         message: "Rental request submitted successfully",
@@ -110,6 +121,16 @@ const createRentalRequest = async (req, res) => {
     };
 
     memoryRentalRequests.unshift(newMemRequest);
+
+    // Notify administrator in in-memory mode
+    createAndEmitNotification({
+      recipient: "admin",
+      sender: tenantId,
+      title: "New Rental Application",
+      message: `${tenantName} submitted an application for "${cleanTitle}".`,
+      type: "application_submitted",
+      relatedId: String(newMemRequest._id),
+    }).catch(() => {});
 
     res.status(201).json({
       success: true,
@@ -320,6 +341,19 @@ const updateRentalRequestStatus = async (req, res) => {
         await Property.findByIdAndUpdate(request.property, { status: "Rented" });
       }
 
+      // Notify tenant of review decision
+      createAndEmitNotification({
+        recipient: request.tenant,
+        sender: req.user.id,
+        title: status === "Approved" ? "Application Approved! 🎉" : "Application Status Update",
+        message:
+          status === "Approved"
+            ? `Your application for "${request.propertyTitle}" has been approved! Welcome home.`
+            : `Your application for "${request.propertyTitle}" was reviewed and marked as ${status}.`,
+        type: status === "Approved" ? "application_approved" : "application_rejected",
+        relatedId: String(request._id),
+      }).catch(() => {});
+
       return res.status(200).json({
         success: true,
         message: `Rental request marked as ${status}`,
@@ -341,6 +375,19 @@ const updateRentalRequestStatus = async (req, res) => {
       reviewedAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     };
+
+    // Notify tenant of review decision in in-memory mode
+    createAndEmitNotification({
+      recipient: memoryRentalRequests[index].tenant,
+      sender: req.user.id,
+      title: status === "Approved" ? "Application Approved! 🎉" : "Application Status Update",
+      message:
+        status === "Approved"
+          ? `Your application for "${memoryRentalRequests[index].propertyTitle}" has been approved!`
+          : `Your application for "${memoryRentalRequests[index].propertyTitle}" was marked as ${status}.`,
+      type: status === "Approved" ? "application_approved" : "application_rejected",
+      relatedId: String(id),
+    }).catch(() => {});
 
     res.status(200).json({
       success: true,
@@ -382,6 +429,18 @@ const deleteRentalRequest = async (req, res) => {
 
       await RentalRequest.findByIdAndDelete(id);
 
+      // Notify administrator if tenant withdrew application
+      if (req.user.role !== "admin") {
+        createAndEmitNotification({
+          recipient: "admin",
+          sender: req.user.id,
+          title: "Application Withdrawn",
+          message: `${req.user.name || "Tenant"} withdrew their rental application for "${request.propertyTitle}".`,
+          type: "application_cancelled",
+          relatedId: String(id),
+        }).catch(() => {});
+      }
+
       return res.status(200).json({
         success: true,
         message: "Rental request cancelled successfully",
@@ -402,7 +461,19 @@ const deleteRentalRequest = async (req, res) => {
       });
     }
 
-    memoryRentalRequests.splice(index, 1);
+    const deletedReq = memoryRentalRequests.splice(index, 1)[0];
+
+    // Notify administrator in in-memory mode
+    if (req.user.role !== "admin") {
+      createAndEmitNotification({
+        recipient: "admin",
+        sender: req.user.id,
+        title: "Application Withdrawn",
+        message: `${req.user.name || "Tenant"} withdrew their rental application for "${deletedReq?.propertyTitle}".`,
+        type: "application_cancelled",
+        relatedId: String(id),
+      }).catch(() => {});
+    }
 
     res.status(200).json({
       success: true,

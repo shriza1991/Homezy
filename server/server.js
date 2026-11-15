@@ -1,4 +1,5 @@
 const express = require("express");
+const http = require("http");
 const cors = require("cors");
 const dotenv = require("dotenv");
 const mongoose = require("mongoose");
@@ -7,6 +8,8 @@ const connectDB = require("./config/db");
 const authRoutes = require("./routes/authRoutes");
 const propertyRoutes = require("./routes/propertyRoutes");
 const rentalRequestRoutes = require("./routes/rentalRequestRoutes");
+const notificationRoutes = require("./routes/notificationRoutes");
+const { initSocket, getIO } = require("./socket");
 const { notFound, errorHandler } = require("./middleware/errorMiddleware");
 
 dotenv.config();
@@ -96,10 +99,18 @@ app.get("/api/health/ready", (req, res) => {
 app.use("/api/auth", authRoutes);
 app.use("/api/properties", propertyRoutes);
 app.use("/api/rental-requests", rentalRequestRoutes);
+app.use("/api/notifications", notificationRoutes);
 
 // 404 & Central Error Handling
 app.use(notFound);
 app.use(errorHandler);
+
+// Helper to create combined HTTP + Socket.IO server
+const createHttpServer = (customApp = app) => {
+  const httpServer = http.createServer(customApp);
+  const io = initSocket(httpServer);
+  return { httpServer, server: httpServer, io };
+};
 
 // Server startup function
 const startServer = async (customPort) => {
@@ -108,7 +119,9 @@ const startServer = async (customPort) => {
   // Initiate database connection
   await connectDB();
 
-  const server = app.listen(port, () => {
+  const { server } = createHttpServer(app);
+
+  server.listen(port, () => {
     console.log(`[Homezy] Server running in ${process.env.NODE_ENV || "development"} mode on port ${port}`);
   });
 
@@ -144,4 +157,4 @@ if (require.main === module) {
   startServer();
 }
 
-module.exports = { app, startServer };
+module.exports = { app, startServer, createHttpServer, getIO };

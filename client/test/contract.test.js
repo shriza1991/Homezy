@@ -16,8 +16,14 @@ import {
   fetchAllRentalRequests,
   updateRentalRequestStatus,
   deleteRentalRequest,
+  fetchNotifications,
+  fetchUnreadCount,
+  markNotificationAsRead,
+  markAllNotificationsAsRead,
+  deleteNotification,
   checkServerHealth,
 } from "../src/services/api.js";
+import { connectSocket, disconnectSocket } from "../src/services/socket.js";
 
 describe("Homezy Client Data & API Contract Checks", () => {
   test("filterProperties filters by search query and category", () => {
@@ -377,5 +383,96 @@ describe("Homezy Client Data & API Contract Checks", () => {
     } finally {
       globalThis.fetch = originalFetch;
     }
+  });
+
+  test("Notifications API contracts: fetchNotifications, fetchUnreadCount, markAsRead, markAllAsRead, deleteNotification", async () => {
+    const originalFetch = globalThis.fetch;
+    try {
+      // 1. fetchNotifications
+      globalThis.fetch = async (url, opts) => {
+        assert.ok(url.includes("/notifications"));
+        assert.equal(opts.headers.Authorization, "Bearer notif_token");
+        return {
+          ok: true,
+          status: 200,
+          json: async () => ({
+            success: true,
+            unreadCount: 2,
+            notifications: [
+              { _id: "n-1", title: "App Approved", isRead: false },
+              { _id: "n-2", title: "New Listing", isRead: false },
+            ],
+          }),
+        };
+      };
+      const notifsData = await fetchNotifications("notif_token");
+      assert.equal(notifsData.unreadCount, 2);
+      assert.equal(notifsData.notifications.length, 2);
+
+      // 2. fetchUnreadCount
+      globalThis.fetch = async (url) => {
+        assert.ok(url.includes("/notifications/unread-count"));
+        return {
+          ok: true,
+          status: 200,
+          json: async () => ({ success: true, unreadCount: 5 }),
+        };
+      };
+      const count = await fetchUnreadCount("notif_token");
+      assert.equal(count, 5);
+
+      // 3. markNotificationAsRead
+      globalThis.fetch = async (url, opts) => {
+        assert.ok(url.includes("/notifications/n-1/read"));
+        assert.equal(opts.method, "PATCH");
+        return {
+          ok: true,
+          status: 200,
+          json: async () => ({
+            success: true,
+            notification: { _id: "n-1", isRead: true },
+            unreadCount: 1,
+          }),
+        };
+      };
+      const readRes = await markNotificationAsRead("n-1", "notif_token");
+      assert.equal(readRes.notification.isRead, true);
+
+      // 4. markAllNotificationsAsRead
+      globalThis.fetch = async (url, opts) => {
+        assert.ok(url.includes("/notifications/read-all"));
+        assert.equal(opts.method, "PATCH");
+        return {
+          ok: true,
+          status: 200,
+          json: async () => ({ success: true, unreadCount: 0 }),
+        };
+      };
+      const allReadRes = await markAllNotificationsAsRead("notif_token");
+      assert.equal(allReadRes.unreadCount, 0);
+
+      // 5. deleteNotification
+      globalThis.fetch = async (url, opts) => {
+        assert.ok(url.includes("/notifications/n-1"));
+        assert.equal(opts.method, "DELETE");
+        return {
+          ok: true,
+          status: 200,
+          json: async () => ({ success: true }),
+        };
+      };
+      const delRes = await deleteNotification("n-1", "notif_token");
+      assert.equal(delRes, true);
+    } finally {
+      globalThis.fetch = originalFetch;
+    }
+  });
+
+  test("Socket client helper manages lifecycle and handlers cleanly", () => {
+    // Calling connectSocket without token returns null
+    const noToken = connectSocket(null);
+    assert.equal(noToken, null);
+
+    disconnectSocket();
   });
 });

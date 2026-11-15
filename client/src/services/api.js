@@ -301,6 +301,97 @@ export async function deleteRentalRequest(id, token) {
 }
 
 /**
+ * Fetch authenticated user's notifications
+ * @param {string} token
+ */
+export async function fetchNotifications(token) {
+  if (!token) return { notifications: [], unreadCount: 0 };
+  const response = await fetch(`${API_URL}/notifications`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+
+  const data = await response.json().catch(() => null);
+  if (!response.ok) {
+    throw new Error(data?.message || "Failed to fetch notifications");
+  }
+  return {
+    notifications: data?.notifications || [],
+    unreadCount: data?.unreadCount || 0,
+  };
+}
+
+/**
+ * Fetch total unread count for user
+ * @param {string} token
+ */
+export async function fetchUnreadCount(token) {
+  if (!token) return 0;
+  const response = await fetch(`${API_URL}/notifications/unread-count`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+
+  const data = await response.json().catch(() => null);
+  if (!response.ok) return 0;
+  return data?.unreadCount || 0;
+}
+
+/**
+ * Mark a single notification as read
+ * @param {string} id
+ * @param {string} token
+ */
+export async function markNotificationAsRead(id, token) {
+  if (!token) throw new Error("Authentication token required");
+  const response = await fetch(`${API_URL}/notifications/${id}/read`, {
+    method: "PATCH",
+    headers: { Authorization: `Bearer ${token}` },
+  });
+
+  const data = await response.json().catch(() => null);
+  if (!response.ok) {
+    throw new Error(data?.message || "Failed to mark notification as read");
+  }
+  return data;
+}
+
+/**
+ * Mark all notifications as read
+ * @param {string} token
+ */
+export async function markAllNotificationsAsRead(token) {
+  if (!token) throw new Error("Authentication token required");
+  const response = await fetch(`${API_URL}/notifications/read-all`, {
+    method: "PATCH",
+    headers: { Authorization: `Bearer ${token}` },
+  });
+
+  const data = await response.json().catch(() => null);
+  if (!response.ok) {
+    throw new Error(data?.message || "Failed to mark all as read");
+  }
+  return data;
+}
+
+/**
+ * Delete a notification
+ * @param {string} id
+ * @param {string} token
+ */
+export async function deleteNotification(id, token) {
+  if (!token) throw new Error("Authentication token required");
+  const response = await fetch(`${API_URL}/notifications/${id}`, {
+    method: "DELETE",
+    headers: { Authorization: `Bearer ${token}` },
+  });
+
+  const data = await response.json().catch(() => null);
+  if (!response.ok) {
+    throw new Error(data?.message || "Failed to delete notification");
+  }
+  return true;
+}
+
+/**
  * Health check helper to verify backend connectivity
  */
 export async function checkServerHealth() {
