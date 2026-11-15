@@ -6,9 +6,11 @@ import {
   checkServerHealth,
   fetchProperties,
   createProperty,
+  updateProperty,
   deleteProperty,
   fetchAllRentalRequests,
   updateRentalRequestStatus,
+  deleteRentalRequest,
 } from "../services/api";
 
 function AdminDashboard() {
@@ -33,6 +35,12 @@ function AdminDashboard() {
     description: "",
     bedrooms: "2 BHK",
   });
+
+  // Edit property modal state
+  const [editingProperty, setEditingProperty] = useState(null);
+
+  // Review application modal state
+  const [reviewModal, setReviewModal] = useState(null);
 
   useEffect(() => {
     let isMounted = true;
@@ -77,7 +85,7 @@ function AdminDashboard() {
     setActionMessage("");
     try {
       await createProperty(newProp, token);
-      setActionMessage(`Property "${newProp.title}" created successfully!`);
+      setActionMessage(`Property "${newProp.title}" created successfully in MongoDB!`);
       setNewProp({
         title: "",
         location: "",
@@ -90,6 +98,38 @@ function AdminDashboard() {
       handleRefresh();
     } catch (err) {
       alert(`Error creating property: ${err.message}`);
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleStartEditProperty = (prop) => {
+    setEditingProperty({
+      id: prop._id || prop.id,
+      title: prop.title || "",
+      location: prop.location || "",
+      price: prop.price || "",
+      type: prop.type || "Apartment",
+      status: prop.status || "Available",
+      bedrooms: prop.bedrooms || "2 BHK",
+      description: prop.description || "",
+    });
+  };
+
+  const handleSaveEditProperty = async (e) => {
+    e.preventDefault();
+    if (!editingProperty) return;
+
+    setIsSubmitting(true);
+    setActionMessage("");
+
+    try {
+      await updateProperty(editingProperty.id, editingProperty, token);
+      setActionMessage(`Property "${editingProperty.title}" updated successfully!`);
+      setEditingProperty(null);
+      handleRefresh();
+    } catch (err) {
+      alert(`Failed to update property: ${err.message}`);
     } finally {
       setIsSubmitting(false);
     }
@@ -108,14 +148,60 @@ function AdminDashboard() {
     }
   };
 
-  const handleApproveRejectRequest = async (id, status) => {
+  // Open the review modal
+  const openReviewModal = (req, targetStatus) => {
+    setReviewModal({
+      id: req._id || req.id,
+      propertyTitle: req.propertyTitle,
+      tenantName: req.tenantName,
+      status: targetStatus,
+      adminNotes:
+        targetStatus === "Approved"
+          ? "Application approved. Welcome to your new home!"
+          : "Property is currently unavailable or application criteria unmet.",
+      updatePropertyStatus: targetStatus === "Approved",
+    });
+  };
+
+  const handleReviewSubmit = async (e) => {
+    e.preventDefault();
+    if (!reviewModal) return;
+
+    setIsSubmitting(true);
     setActionMessage("");
+
     try {
-      await updateRentalRequestStatus(id, status, token, `Application ${status.toLowerCase()} by Administrator`);
-      setActionMessage(`Rental request ${status.toLowerCase()} successfully.`);
+      await updateRentalRequestStatus(reviewModal.id, reviewModal.status, token, {
+        adminNotes: reviewModal.adminNotes,
+        updatePropertyStatus: reviewModal.updatePropertyStatus,
+      });
+
+      setActionMessage(
+        `Application for "${reviewModal.propertyTitle}" marked as ${reviewModal.status}.${
+          reviewModal.updatePropertyStatus ? " Property status set to Rented." : ""
+        }`
+      );
+      setReviewModal(null);
       handleRefresh();
     } catch (err) {
       alert(`Error updating request: ${err.message}`);
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleDeleteRentalRequest = async (req) => {
+    const reqId = req._id || req.id;
+    if (!window.confirm(`Delete rental application for "${req.propertyTitle}" from ${req.tenantName}?`)) {
+      return;
+    }
+
+    try {
+      await deleteRentalRequest(reqId, token);
+      setActionMessage(`Rental application removed.`);
+      handleRefresh();
+    } catch (err) {
+      alert(`Failed to delete application: ${err.message}`);
     }
   };
 
@@ -141,20 +227,26 @@ function AdminDashboard() {
           <div className="flex flex-wrap items-center gap-3">
             <button
               onClick={() => setShowAddForm(!showAddForm)}
-              className="rounded-lg bg-emerald-600 px-4 py-2 font-semibold text-white transition hover:bg-emerald-700 shadow-sm"
+              className="rounded-lg bg-emerald-600 px-4 py-2 font-semibold text-white transition hover:bg-emerald-700 shadow-sm text-sm"
             >
               {showAddForm ? "Cancel" : "+ Add Property Listing"}
             </button>
             <button
               onClick={handleRefresh}
               disabled={loading}
-              className="rounded-lg bg-indigo-600 px-4 py-2 font-semibold text-white transition hover:bg-indigo-700 disabled:opacity-50"
+              className="rounded-lg bg-indigo-600 px-4 py-2 font-semibold text-white transition hover:bg-indigo-700 disabled:opacity-50 text-sm"
             >
               {loading ? "Refreshing..." : "Refresh Stats"}
             </button>
             <Link
+              to="/rental-requests"
+              className="rounded-lg border border-indigo-300 bg-indigo-50 px-4 py-2 font-semibold text-indigo-700 transition hover:bg-indigo-100 text-sm"
+            >
+              All Applications ({rentalRequests.length})
+            </Link>
+            <Link
               to="/properties"
-              className="rounded-lg border border-slate-300 bg-white px-4 py-2 font-medium text-slate-700 transition hover:bg-slate-50"
+              className="rounded-lg border border-slate-300 bg-white px-4 py-2 font-medium text-slate-700 transition hover:bg-slate-50 text-sm"
             >
               Live Catalog
             </Link>
@@ -196,7 +288,7 @@ function AdminDashboard() {
                   placeholder="e.g. Modern Sea-Facing 2 BHK"
                   value={newProp.title}
                   onChange={(e) => setNewProp({ ...newProp, title: e.target.value })}
-                  className="w-full rounded-lg border border-slate-300 p-2.5 outline-none focus:border-indigo-500"
+                  className="w-full rounded-lg border border-slate-300 p-2.5 outline-none focus:border-indigo-500 text-sm"
                 />
               </div>
 
@@ -208,7 +300,7 @@ function AdminDashboard() {
                   placeholder="e.g. Bandra West, Mumbai"
                   value={newProp.location}
                   onChange={(e) => setNewProp({ ...newProp, location: e.target.value })}
-                  className="w-full rounded-lg border border-slate-300 p-2.5 outline-none focus:border-indigo-500"
+                  className="w-full rounded-lg border border-slate-300 p-2.5 outline-none focus:border-indigo-500 text-sm"
                 />
               </div>
 
@@ -220,7 +312,7 @@ function AdminDashboard() {
                   placeholder="e.g. 45,000"
                   value={newProp.price}
                   onChange={(e) => setNewProp({ ...newProp, price: e.target.value })}
-                  className="w-full rounded-lg border border-slate-300 p-2.5 outline-none focus:border-indigo-500"
+                  className="w-full rounded-lg border border-slate-300 p-2.5 outline-none focus:border-indigo-500 text-sm"
                 />
               </div>
 
@@ -229,7 +321,7 @@ function AdminDashboard() {
                 <select
                   value={newProp.type}
                   onChange={(e) => setNewProp({ ...newProp, type: e.target.value })}
-                  className="w-full rounded-lg border border-slate-300 p-2.5 outline-none focus:border-indigo-500"
+                  className="w-full rounded-lg border border-slate-300 p-2.5 outline-none focus:border-indigo-500 text-sm"
                 >
                   <option value="Apartment">Apartment</option>
                   <option value="Independent House">Independent House</option>
@@ -237,6 +329,17 @@ function AdminDashboard() {
                   <option value="Luxury Apartment">Luxury Apartment</option>
                   <option value="Villa">Villa</option>
                 </select>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">Bedrooms / Configuration</label>
+                <input
+                  type="text"
+                  placeholder="e.g. 2 BHK, 3 BHK Studio"
+                  value={newProp.bedrooms}
+                  onChange={(e) => setNewProp({ ...newProp, bedrooms: e.target.value })}
+                  className="w-full rounded-lg border border-slate-300 p-2.5 outline-none focus:border-indigo-500 text-sm"
+                />
               </div>
 
               <div className="sm:col-span-2">
@@ -247,7 +350,7 @@ function AdminDashboard() {
                   placeholder="Describe property features, location advantages, connectivity..."
                   value={newProp.description}
                   onChange={(e) => setNewProp({ ...newProp, description: e.target.value })}
-                  className="w-full rounded-lg border border-slate-300 p-2.5 outline-none focus:border-indigo-500"
+                  className="w-full rounded-lg border border-slate-300 p-2.5 outline-none focus:border-indigo-500 text-sm"
                 />
               </div>
 
@@ -255,19 +358,230 @@ function AdminDashboard() {
                 <button
                   type="button"
                   onClick={() => setShowAddForm(false)}
-                  className="rounded-lg border border-slate-300 px-5 py-2 font-medium text-slate-600 hover:bg-slate-50"
+                  className="rounded-lg border border-slate-300 px-5 py-2 font-medium text-slate-600 hover:bg-slate-50 text-sm"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={isSubmitting}
-                  className="rounded-lg bg-emerald-600 px-6 py-2 font-semibold text-white hover:bg-emerald-700 disabled:opacity-50"
+                  className="rounded-lg bg-emerald-600 px-6 py-2 font-semibold text-white hover:bg-emerald-700 disabled:opacity-50 text-sm"
                 >
                   {isSubmitting ? "Creating..." : "Save to MongoDB"}
                 </button>
               </div>
             </form>
+          </div>
+        )}
+
+        {/* Edit Property Modal */}
+        {editingProperty && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 p-4">
+            <div className="w-full max-w-xl rounded-2xl bg-white p-6 shadow-xl border border-slate-200">
+              <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+                <h3 className="text-lg font-bold text-slate-900">
+                  Edit Property: {editingProperty.title}
+                </h3>
+                <button
+                  onClick={() => setEditingProperty(null)}
+                  className="text-slate-400 hover:text-slate-600 font-bold"
+                >
+                  &times;
+                </button>
+              </div>
+
+              <form onSubmit={handleSaveEditProperty} className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2">
+                <div>
+                  <label className="block text-xs font-semibold uppercase text-slate-500 mb-1">Title</label>
+                  <input
+                    type="text"
+                    required
+                    value={editingProperty.title}
+                    onChange={(e) => setEditingProperty({ ...editingProperty, title: e.target.value })}
+                    className="w-full rounded-lg border border-slate-300 p-2 text-sm outline-none focus:border-indigo-500"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold uppercase text-slate-500 mb-1">Location</label>
+                  <input
+                    type="text"
+                    required
+                    value={editingProperty.location}
+                    onChange={(e) => setEditingProperty({ ...editingProperty, location: e.target.value })}
+                    className="w-full rounded-lg border border-slate-300 p-2 text-sm outline-none focus:border-indigo-500"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold uppercase text-slate-500 mb-1">Price (₹ / month)</label>
+                  <input
+                    type="text"
+                    required
+                    value={editingProperty.price}
+                    onChange={(e) => setEditingProperty({ ...editingProperty, price: e.target.value })}
+                    className="w-full rounded-lg border border-slate-300 p-2 text-sm outline-none focus:border-indigo-500"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold uppercase text-slate-500 mb-1">Status</label>
+                  <select
+                    value={editingProperty.status}
+                    onChange={(e) => setEditingProperty({ ...editingProperty, status: e.target.value })}
+                    className="w-full rounded-lg border border-slate-300 p-2 text-sm font-semibold outline-none focus:border-indigo-500"
+                  >
+                    <option value="Available">Available</option>
+                    <option value="Rented">Rented</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold uppercase text-slate-500 mb-1">Property Type</label>
+                  <select
+                    value={editingProperty.type}
+                    onChange={(e) => setEditingProperty({ ...editingProperty, type: e.target.value })}
+                    className="w-full rounded-lg border border-slate-300 p-2 text-sm outline-none focus:border-indigo-500"
+                  >
+                    <option value="Apartment">Apartment</option>
+                    <option value="Independent House">Independent House</option>
+                    <option value="Flat">Flat</option>
+                    <option value="Luxury Apartment">Luxury Apartment</option>
+                    <option value="Villa">Villa</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold uppercase text-slate-500 mb-1">Bedrooms</label>
+                  <input
+                    type="text"
+                    value={editingProperty.bedrooms}
+                    onChange={(e) => setEditingProperty({ ...editingProperty, bedrooms: e.target.value })}
+                    className="w-full rounded-lg border border-slate-300 p-2 text-sm outline-none focus:border-indigo-500"
+                  />
+                </div>
+
+                <div className="sm:col-span-2">
+                  <label className="block text-xs font-semibold uppercase text-slate-500 mb-1">Description</label>
+                  <textarea
+                    rows="3"
+                    value={editingProperty.description}
+                    onChange={(e) => setEditingProperty({ ...editingProperty, description: e.target.value })}
+                    className="w-full rounded-lg border border-slate-300 p-2 text-sm outline-none focus:border-indigo-500"
+                  />
+                </div>
+
+                <div className="sm:col-span-2 flex justify-end gap-3 pt-3 border-t border-slate-100">
+                  <button
+                    type="button"
+                    onClick={() => setEditingProperty(null)}
+                    className="rounded-lg border border-slate-300 px-4 py-2 text-xs font-medium text-slate-600 hover:bg-slate-50"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={isSubmitting}
+                    className="rounded-lg bg-indigo-600 px-5 py-2 text-xs font-semibold text-white hover:bg-indigo-700 disabled:opacity-50"
+                  >
+                    {isSubmitting ? "Saving..." : "Save Changes"}
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        )}
+
+        {/* Admin Review Modal */}
+        {reviewModal && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 p-4">
+            <div className="w-full max-w-lg rounded-2xl bg-white p-6 shadow-xl border border-slate-200">
+              <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+                <h3 className="text-lg font-bold text-slate-900">
+                  Review Application: {reviewModal.propertyTitle}
+                </h3>
+                <button
+                  onClick={() => setReviewModal(null)}
+                  className="text-slate-400 hover:text-slate-600 font-bold"
+                >
+                  &times;
+                </button>
+              </div>
+
+              <form onSubmit={handleReviewSubmit} className="mt-4 space-y-4">
+                <div>
+                  <label className="block text-xs font-semibold uppercase text-slate-500 mb-1">
+                    Decision Status
+                  </label>
+                  <select
+                    value={reviewModal.status}
+                    onChange={(e) =>
+                      setReviewModal({ ...reviewModal, status: e.target.value })
+                    }
+                    className="w-full rounded-lg border border-slate-300 p-2 text-sm font-semibold outline-none focus:border-indigo-500"
+                  >
+                    <option value="Approved">Approved</option>
+                    <option value="Rejected">Rejected</option>
+                    <option value="Pending">Pending</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold uppercase text-slate-500 mb-1">
+                    Feedback / Instructions for Applicant ({reviewModal.tenantName})
+                  </label>
+                  <textarea
+                    rows="3"
+                    value={reviewModal.adminNotes}
+                    onChange={(e) =>
+                      setReviewModal({ ...reviewModal, adminNotes: e.target.value })
+                    }
+                    placeholder="Enter approval conditions, key handover info, or rejection reason..."
+                    className="w-full rounded-lg border border-slate-300 p-2.5 text-sm outline-none focus:border-indigo-500"
+                  />
+                </div>
+
+                {reviewModal.status === "Approved" && (
+                  <label className="flex items-center gap-2 text-xs font-medium text-slate-700 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={reviewModal.updatePropertyStatus}
+                      onChange={(e) =>
+                        setReviewModal({
+                          ...reviewModal,
+                          updatePropertyStatus: e.target.checked,
+                        })
+                      }
+                      className="rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
+                    />
+                    Automatically mark property status as <strong>Rented</strong> in catalog
+                  </label>
+                )}
+
+                <div className="flex justify-end gap-3 pt-3 border-t border-slate-100">
+                  <button
+                    type="button"
+                    onClick={() => setReviewModal(null)}
+                    className="rounded-lg border border-slate-300 px-4 py-2 text-xs font-medium text-slate-600 hover:bg-slate-50"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={isSubmitting}
+                    className={`rounded-lg px-5 py-2 text-xs font-semibold text-white shadow-sm disabled:opacity-50 ${
+                      reviewModal.status === "Approved"
+                        ? "bg-emerald-600 hover:bg-emerald-700"
+                        : "bg-red-600 hover:bg-red-700"
+                    }`}
+                  >
+                    {isSubmitting
+                      ? "Saving..."
+                      : `Confirm ${reviewModal.status}`}
+                  </button>
+                </div>
+              </form>
+            </div>
           </div>
         )}
 
@@ -321,17 +635,17 @@ function AdminDashboard() {
           </div>
         </div>
 
-        {/* Pending Rental Applications Section */}
+        {/* Tenant Rental Applications Section */}
         <div className="mt-10 rounded-xl border border-slate-200 bg-white shadow-sm overflow-hidden">
           <div className="border-b border-slate-200 px-6 py-4 flex items-center justify-between">
             <div>
-              <h2 className="text-lg font-bold text-slate-900">Tenant Rental Applications (M4)</h2>
+              <h2 className="text-lg font-bold text-slate-900">Tenant Rental Applications</h2>
               <p className="text-sm text-slate-500">
                 Review and approve or reject persistent applications from tenants
               </p>
             </div>
             <Link to="/rental-requests" className="text-xs font-semibold text-indigo-600 hover:text-indigo-800">
-              View All History &rarr;
+              View All Applications &rarr;
             </Link>
           </div>
 
@@ -352,9 +666,11 @@ function AdminDashboard() {
                     const reqId = req._id || req.id;
                     return (
                       <tr key={reqId} className="hover:bg-slate-50">
-                        <td className="px-6 py-4 font-medium text-slate-900">{req.propertyTitle}</td>
+                        <td className="px-6 py-4 font-medium text-slate-900">
+                          {req.propertyTitle}
+                        </td>
                         <td className="px-6 py-4">{req.tenantName} ({req.tenantEmail})</td>
-                        <td className="px-6 py-4">{req.tenantPhone}</td>
+                        <td className="px-6 py-4">{req.tenantPhone || "Not specified"}</td>
                         <td className="px-6 py-4">
                           <span
                             className={`rounded-full px-2.5 py-0.5 text-xs font-semibold uppercase ${
@@ -372,21 +688,27 @@ function AdminDashboard() {
                           {req.status === "Pending" ? (
                             <>
                               <button
-                                onClick={() => handleApproveRejectRequest(reqId, "Approved")}
+                                onClick={() => openReviewModal(req, "Approved")}
                                 className="rounded bg-emerald-600 px-2.5 py-1 text-xs font-semibold text-white hover:bg-emerald-700"
                               >
-                                Approve
+                                Approve...
                               </button>
                               <button
-                                onClick={() => handleApproveRejectRequest(reqId, "Rejected")}
+                                onClick={() => openReviewModal(req, "Rejected")}
                                 className="rounded bg-red-600 px-2.5 py-1 text-xs font-semibold text-white hover:bg-red-700 ml-1.5"
                               >
-                                Reject
+                                Reject...
                               </button>
                             </>
                           ) : (
                             <span className="text-xs text-slate-400 font-medium">Reviewed</span>
                           )}
+                          <button
+                            onClick={() => handleDeleteRentalRequest(req)}
+                            className="text-xs text-slate-400 hover:text-red-600 ml-2"
+                          >
+                            &times;
+                          </button>
                         </td>
                       </tr>
                     );
@@ -462,8 +784,14 @@ function AdminDashboard() {
                             View
                           </Link>
                           <button
+                            onClick={() => handleStartEditProperty(p)}
+                            className="text-xs font-semibold text-emerald-600 hover:text-emerald-800 ml-2"
+                          >
+                            Edit
+                          </button>
+                          <button
                             onClick={() => handleDeleteProperty(propId, p.title)}
-                            className="text-xs font-semibold text-red-600 hover:text-red-800 ml-3"
+                            className="text-xs font-semibold text-red-600 hover:text-red-800 ml-2"
                           >
                             Delete
                           </button>

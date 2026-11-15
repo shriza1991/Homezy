@@ -254,17 +254,22 @@ export async function fetchAllRentalRequests(token, status) {
  * @param {string} id
  * @param {"Approved" | "Rejected" | "Pending"} status
  * @param {string} token
- * @param {string} [adminNotes]
+ * @param {string | { adminNotes?: string, updatePropertyStatus?: boolean }} [notesOrOptions]
  */
-export async function updateRentalRequestStatus(id, status, token, adminNotes) {
+export async function updateRentalRequestStatus(id, status, token, notesOrOptions) {
   if (!token) throw new Error("Authentication token required");
+  const payload =
+    typeof notesOrOptions === "object" && notesOrOptions !== null
+      ? { status, ...notesOrOptions }
+      : { status, adminNotes: notesOrOptions };
+
   const response = await fetch(`${API_URL}/rental-requests/${id}/status`, {
     method: "PATCH",
     headers: {
       "Content-Type": "application/json",
       Authorization: `Bearer ${token}`,
     },
-    body: JSON.stringify({ status, adminNotes }),
+    body: JSON.stringify(payload),
   });
 
   const data = await response.json().catch(() => null);
@@ -272,6 +277,27 @@ export async function updateRentalRequestStatus(id, status, token, adminNotes) {
     throw new Error(data?.message || "Failed to update request status");
   }
   return data?.request;
+}
+
+/**
+ * Cancel or delete a rental request application
+ * @param {string} id
+ * @param {string} token
+ */
+export async function deleteRentalRequest(id, token) {
+  if (!token) throw new Error("Authentication token required");
+  const response = await fetch(`${API_URL}/rental-requests/${id}`, {
+    method: "DELETE",
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
+
+  const data = await response.json().catch(() => null);
+  if (!response.ok) {
+    throw new Error(data?.message || "Failed to cancel rental request");
+  }
+  return true;
 }
 
 /**

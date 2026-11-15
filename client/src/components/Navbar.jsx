@@ -30,12 +30,20 @@ function Navbar() {
           {isAuthenticated ? (
             <div className="flex flex-wrap items-center gap-3 md:gap-4">
               {user?.role === "admin" && (
-                <Link
-                  to="/admin"
-                  className="rounded-lg bg-indigo-700 px-3 py-1 text-xs font-semibold uppercase tracking-wider text-yellow-300 transition hover:bg-indigo-800"
-                >
-                  Admin Panel
-                </Link>
+                <>
+                  <Link
+                    to="/admin"
+                    className="rounded-lg bg-indigo-700 px-3 py-1 text-xs font-semibold uppercase tracking-wider text-yellow-300 transition hover:bg-indigo-800"
+                  >
+                    Admin Panel
+                  </Link>
+                  <Link
+                    to="/rental-requests"
+                    className="transition hover:text-yellow-300 text-sm font-medium"
+                  >
+                    Applications
+                  </Link>
+                </>
               )}
 
               {(user?.role === "tenant" || user?.role === "owner") && (

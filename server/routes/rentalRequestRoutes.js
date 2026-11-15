@@ -5,6 +5,7 @@ const {
   getAllRentalRequests,
   getRentalRequestById,
   updateRentalRequestStatus,
+  deleteRentalRequest,
 } = require("../controllers/rentalRequestController");
 const { protect, authorize } = require("../middleware/authMiddleware");
 
@@ -23,5 +24,8 @@ router.get("/:id", protect, getRentalRequestById);
 // Admin approval/rejection actions
 router.patch("/:id/status", protect, authorize("admin"), updateRentalRequestStatus);
 router.put("/:id/status", protect, authorize("admin"), updateRentalRequestStatus);
+
+// Tenant withdrawal / Admin deletion
+router.delete("/:id", protect, deleteRentalRequest);
 
 module.exports = router;

@@ -15,6 +15,7 @@ import {
   fetchMyRentalRequests,
   fetchAllRentalRequests,
   updateRentalRequestStatus,
+  deleteRentalRequest,
   checkServerHealth,
 } from "../src/services/api.js";
 
@@ -297,6 +298,40 @@ describe("Homezy Client Data & API Contract Checks", () => {
       const updated = await updateRentalRequestStatus("req-1", "Approved", "admin_token", "Approved by Admin");
       assert.equal(updated.status, "Approved");
       assert.equal(updated.adminNotes, "Approved by Admin");
+
+      // Update status with options object
+      globalThis.fetch = async (url, opts) => {
+        assert.ok(url.includes("/rental-requests/req-1/status"));
+        const body = JSON.parse(opts.body);
+        assert.equal(body.status, "Approved");
+        assert.equal(body.updatePropertyStatus, true);
+        return {
+          ok: true,
+          status: 200,
+          json: async () => ({
+            success: true,
+            request: { _id: "req-1", status: "Approved" },
+          }),
+        };
+      };
+      await updateRentalRequestStatus("req-1", "Approved", "admin_token", {
+        adminNotes: "Approved",
+        updatePropertyStatus: true,
+      });
+
+      // Delete / cancel rental request
+      globalThis.fetch = async (url, opts) => {
+        assert.ok(url.includes("/rental-requests/req-1"));
+        assert.equal(opts.method, "DELETE");
+        assert.equal(opts.headers.Authorization, "Bearer tenant_token");
+        return {
+          ok: true,
+          status: 200,
+          json: async () => ({ success: true, message: "Rental request cancelled successfully" }),
+        };
+      };
+      const cancelled = await deleteRentalRequest("req-1", "tenant_token");
+      assert.equal(cancelled, true);
     } finally {
       globalThis.fetch = originalFetch;
     }

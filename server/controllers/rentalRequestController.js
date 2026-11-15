@@ -135,9 +135,17 @@ const getMyRentalRequests = async (req, res) => {
         .populate("property", "title location price type status")
         .sort({ createdAt: -1 });
 
+      const stats = {
+        total: requests.length,
+        pending: requests.filter((r) => r.status === "Pending").length,
+        approved: requests.filter((r) => r.status === "Approved").length,
+        rejected: requests.filter((r) => r.status === "Rejected").length,
+      };
+
       return res.status(200).json({
         success: true,
         count: requests.length,
+        stats,
         requests,
       });
     }
@@ -146,9 +154,17 @@ const getMyRentalRequests = async (req, res) => {
       (r) => String(r.tenant) === String(tenantId)
     );
 
+    const stats = {
+      total: myRequests.length,
+      pending: myRequests.filter((r) => r.status === "Pending").length,
+      approved: myRequests.filter((r) => r.status === "Approved").length,
+      rejected: myRequests.filter((r) => r.status === "Rejected").length,
+    };
+
     res.status(200).json({
       success: true,
       count: myRequests.length,
+      stats,
       requests: myRequests,
     });
   } catch (error) {
@@ -167,24 +183,41 @@ const getAllRentalRequests = async (req, res) => {
 
     if (mongoose.connection.readyState === 1) {
       const filter = {};
-      if (status && status.trim()) {
+      if (status && status.trim() && status !== "all") {
         filter.status = status.trim();
       }
 
       const requests = await RentalRequest.find(filter)
         .populate("tenant", "name email phone role")
+        .populate("property", "title location price status")
         .populate("reviewedBy", "name email")
         .sort({ createdAt: -1 });
+
+      const allDocs = await RentalRequest.find();
+      const stats = {
+        total: allDocs.length,
+        pending: allDocs.filter((r) => r.status === "Pending").length,
+        approved: allDocs.filter((r) => r.status === "Approved").length,
+        rejected: allDocs.filter((r) => r.status === "Rejected").length,
+      };
 
       return res.status(200).json({
         success: true,
         count: requests.length,
+        stats,
         requests,
       });
     }
 
     let allReqs = [...memoryRentalRequests];
-    if (status && status.trim()) {
+    const stats = {
+      total: allReqs.length,
+      pending: allReqs.filter((r) => r.status === "Pending").length,
+      approved: allReqs.filter((r) => r.status === "Approved").length,
+      rejected: allReqs.filter((r) => r.status === "Rejected").length,
+    };
+
+    if (status && status.trim() && status !== "all") {
       allReqs = allReqs.filter(
         (r) => r.status.toLowerCase() === status.trim().toLowerCase()
       );
@@ -193,6 +226,7 @@ const getAllRentalRequests = async (req, res) => {
     res.status(200).json({
       success: true,
       count: allReqs.length,
+      stats,
       requests: allReqs,
     });
   } catch (error) {
@@ -215,6 +249,7 @@ const getRentalRequestById = async (req, res) => {
       if (mongoose.isValidObjectId(id)) {
         request = await RentalRequest.findById(id)
           .populate("tenant", "name email phone")
+          .populate("property", "title location price type status")
           .populate("reviewedBy", "name email");
       }
     } else {
@@ -253,7 +288,7 @@ const getRentalRequestById = async (req, res) => {
 // PATCH /api/rental-requests/:id/status - Approve or reject rental request (Admins Only)
 const updateRentalRequestStatus = async (req, res) => {
   const { id } = req.params;
-  const { status, adminNotes } = req.body;
+  const { status, adminNotes, updatePropertyStatus } = req.body;
 
   if (!["Approved", "Rejected", "Pending"].includes(status)) {
     return res.status(400).json({
@@ -279,6 +314,11 @@ const updateRentalRequestStatus = async (req, res) => {
       if (adminNotes !== undefined) request.adminNotes = adminNotes;
 
       await request.save();
+
+      // Optionally update property status when application is approved
+      if (status === "Approved" && updatePropertyStatus && request.property) {
+        await Property.findByIdAndUpdate(request.property, { status: "Rented" });
+      }
 
       return res.status(200).json({
         success: true,
@@ -316,10 +356,72 @@ const updateRentalRequestStatus = async (req, res) => {
   }
 };
 
+// DELETE /api/rental-requests/:id - Cancel or delete rental application
+const deleteRentalRequest = async (req, res) => {
+  const { id } = req.params;
+
+  try {
+    if (mongoose.connection.readyState === 1) {
+      if (!mongoose.isValidObjectId(id)) {
+        return res.status(400).json({ success: false, message: "Invalid request ID format" });
+      }
+
+      const request = await RentalRequest.findById(id);
+      if (!request) {
+        return res.status(404).json({ success: false, message: "Rental request not found" });
+      }
+
+      // Check ownership: tenant can cancel own request; admins can delete any request
+      const tenantIdStr = request.tenant?.toString();
+      if (req.user.role !== "admin" && tenantIdStr !== String(req.user.id)) {
+        return res.status(403).json({
+          success: false,
+          message: "Forbidden: Not authorized to cancel this rental request",
+        });
+      }
+
+      await RentalRequest.findByIdAndDelete(id);
+
+      return res.status(200).json({
+        success: true,
+        message: "Rental request cancelled successfully",
+      });
+    }
+
+    // In-memory deletion
+    const index = memoryRentalRequests.findIndex((r) => String(r._id) === String(id));
+    if (index === -1) {
+      return res.status(404).json({ success: false, message: "Rental request not found" });
+    }
+
+    const tenantIdStr = String(memoryRentalRequests[index].tenant);
+    if (req.user.role !== "admin" && tenantIdStr !== String(req.user.id)) {
+      return res.status(403).json({
+        success: false,
+        message: "Forbidden: Not authorized to cancel this rental request",
+      });
+    }
+
+    memoryRentalRequests.splice(index, 1);
+
+    res.status(200).json({
+      success: true,
+      message: "Rental request cancelled successfully",
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: "Failed to cancel rental request",
+      error: error.message,
+    });
+  }
+};
+
 module.exports = {
   createRentalRequest,
   getMyRentalRequests,
   getAllRentalRequests,
   getRentalRequestById,
   updateRentalRequestStatus,
+  deleteRentalRequest,
 };

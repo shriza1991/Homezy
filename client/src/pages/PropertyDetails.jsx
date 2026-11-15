@@ -1,12 +1,15 @@
 import { useState, useEffect } from "react";
 import { useParams, Link } from "react-router-dom";
-import { fetchPropertyById } from "../services/api";
+import { fetchPropertyById, fetchMyRentalRequests } from "../services/api";
 import { properties as fallbackProperties } from "../data/properties";
+import { useAuth } from "../hooks/useAuth";
 
 function PropertyDetails() {
   const { id } = useParams();
+  const { user, token, isAuthenticated } = useAuth();
   const [property, setProperty] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [existingRequest, setExistingRequest] = useState(null);
 
   useEffect(() => {
     let isMounted = true;
@@ -39,6 +42,30 @@ function PropertyDetails() {
       isMounted = false;
     };
   }, [id]);
+
+  // Check if tenant already has an active or past application for this property
+  useEffect(() => {
+    let isMounted = true;
+    if (!token || user?.role !== "tenant" || !property) return;
+
+    fetchMyRentalRequests(token)
+      .then((reqs) => {
+        if (!isMounted || !Array.isArray(reqs)) return;
+        const propTitle = property.title?.trim().toLowerCase();
+        const propId = String(property._id || property.id || "");
+        const match = reqs.find((r) => {
+          const reqPropId = String(r.property?._id || r.property || r.propertyId || "");
+          const reqTitle = String(r.propertyTitle || "").trim().toLowerCase();
+          return (reqPropId && reqPropId === propId) || (reqTitle && reqTitle === propTitle);
+        });
+        setExistingRequest(match || null);
+      })
+      .catch(() => {});
+
+    return () => {
+      isMounted = false;
+    };
+  }, [token, user?.role, property]);
 
   if (loading) {
     return (
@@ -179,20 +206,77 @@ function PropertyDetails() {
                 Ready to move in?
               </h2>
 
-              <p className="mt-2 text-sm text-slate-600">
-                Submit an instant rental request directly to schedule a viewing or secure this listing.
-              </p>
+              {existingRequest ? (
+                <div className="mt-4 rounded-xl border border-indigo-200 bg-indigo-50/70 p-4">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-bold uppercase tracking-wider text-indigo-900">
+                      Your Application
+                    </span>
+                    <span
+                      className={`rounded-full px-2.5 py-0.5 text-xs font-bold uppercase ${
+                        existingRequest.status === "Approved"
+                          ? "bg-emerald-100 text-emerald-800"
+                          : existingRequest.status === "Rejected"
+                          ? "bg-red-100 text-red-800"
+                          : "bg-amber-100 text-amber-800"
+                      }`}
+                    >
+                      {existingRequest.status}
+                    </span>
+                  </div>
+                  <p className="mt-2 text-xs text-indigo-950">
+                    {existingRequest.status === "Approved"
+                      ? "Congratulations! Your application for this listing has been approved."
+                      : existingRequest.status === "Rejected"
+                      ? "Your application was reviewed and rejected."
+                      : "Your application is currently under review by the administrator."}
+                  </p>
+                  {existingRequest.adminNotes && (
+                    <div className="mt-2 rounded bg-white/80 p-2 text-xs text-slate-700 italic border border-indigo-100">
+                      &ldquo;{existingRequest.adminNotes}&rdquo;
+                    </div>
+                  )}
+                  <Link
+                    to="/rental-requests"
+                    className="mt-4 block w-full rounded-lg bg-indigo-600 px-4 py-2.5 text-center text-xs font-semibold text-white transition hover:bg-indigo-700"
+                  >
+                    View in My Applications &rarr;
+                  </Link>
+                </div>
+              ) : property.status === "Rented" ? (
+                <div className="mt-4 rounded-xl border border-amber-200 bg-amber-50 p-4 text-amber-900 text-sm">
+                  <p className="font-semibold">Listing Currently Rented</p>
+                  <p className="mt-1 text-xs text-amber-800">
+                    This property has already been leased out and is not currently accepting new tenancy applications.
+                  </p>
+                </div>
+              ) : (
+                <>
+                  <p className="mt-2 text-sm text-slate-600">
+                    Submit an instant rental request directly to schedule a viewing or secure this listing.
+                  </p>
 
-              <Link
-                to={`/property-request?property=${encodeURIComponent(property.title)}`}
-                className="mt-6 block w-full rounded-xl bg-indigo-600 px-6 py-3.5 text-center font-semibold text-white transition hover:bg-indigo-700 shadow-md"
-              >
-                Request to Rent
-              </Link>
+                  <Link
+                    to={`/property-request?property=${encodeURIComponent(property.title)}&propertyId=${property._id || property.id}`}
+                    className="mt-6 block w-full rounded-xl bg-indigo-600 px-6 py-3.5 text-center font-semibold text-white transition hover:bg-indigo-700 shadow-md"
+                  >
+                    Request to Rent
+                  </Link>
+                </>
+              )}
+
+              {!isAuthenticated && !existingRequest && (
+                <p className="mt-3 text-center text-xs text-slate-500">
+                  <Link to="/login" className="text-indigo-600 font-semibold hover:underline">
+                    Sign in
+                  </Link>{" "}
+                  with a Tenant account to submit an application.
+                </p>
+              )}
 
               <Link
                 to="/properties"
-                className="mt-3 block w-full rounded-xl border border-slate-300 px-6 py-3 text-center text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
+                className="mt-4 block w-full rounded-xl border border-slate-300 px-6 py-3 text-center text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
               >
                 Back to All Properties
               </Link>

@@ -167,4 +167,40 @@ describe("Homezy Rental Requests, History & Access Validation Tests", () => {
     assert.equal(target.status, "Approved");
     assert.equal(target.adminNotes, "Application documents verified. Welcome to Homezy!");
   });
+
+  test("WITHDRAWAL & DELETION: Tenant can withdraw own request; other tenants blocked with 403", async () => {
+    // 1. Tenant Alice creates a new application
+    const createRes = await fetch(`${baseUrl}/api/rental-requests`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${tenantTokenA}`,
+      },
+      body: JSON.stringify({
+        propertyTitle: "Sunny Bandra Studio",
+        propertyLocation: "Bandra, Mumbai",
+        monthlyRent: "35,000",
+        message: "Applying for 1-year lease.",
+      }),
+    });
+    assert.equal(createRes.status, 201);
+    const createData = await createRes.json();
+    const reqToCancelId = createData.request._id;
+
+    // 2. Tenant Bob attempts to delete Alice's application -> 403 Forbidden
+    const forbiddenRes = await fetch(`${baseUrl}/api/rental-requests/${reqToCancelId}`, {
+      method: "DELETE",
+      headers: { Authorization: `Bearer ${tenantTokenB}` },
+    });
+    assert.equal(forbiddenRes.status, 403);
+
+    // 3. Alice withdraws her own application -> 200 OK
+    const cancelRes = await fetch(`${baseUrl}/api/rental-requests/${reqToCancelId}`, {
+      method: "DELETE",
+      headers: { Authorization: `Bearer ${tenantTokenA}` },
+    });
+    assert.equal(cancelRes.status, 200);
+    const cancelData = await cancelRes.json();
+    assert.equal(cancelData.success, true);
+  });
 });

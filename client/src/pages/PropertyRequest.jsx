@@ -29,6 +29,13 @@ function PropertyRequest() {
         if (!isMounted) return;
         if (Array.isArray(items) && items.length > 0) {
           setAvailableProperties(items);
+          const idParam = params.get("propertyId");
+          if (idParam) {
+            const matched = items.find((p) => String(p._id || p.id) === String(idParam));
+            if (matched) {
+              setFormData((prev) => (prev.property ? prev : { ...prev, property: matched.title }));
+            }
+          }
         }
       })
       .catch(() => {});
@@ -36,7 +43,7 @@ function PropertyRequest() {
     return () => {
       isMounted = false;
     };
-  }, []);
+  }, [params]);
 
   const handleChange = (e) => {
     setFormData((prev) => ({
@@ -115,7 +122,17 @@ function PropertyRequest() {
 
         {error && (
           <div role="alert" className="mt-6 rounded-xl bg-red-50 border border-red-200 p-4 text-red-700 text-sm font-medium">
-            {error}
+            <p>{error}</p>
+            {error.toLowerCase().includes("already have an active") && (
+              <div className="mt-2">
+                <Link
+                  to="/rental-requests"
+                  className="font-bold underline text-red-800 hover:text-red-950 text-xs"
+                >
+                  View your current applications in My Requests &rarr;
+                </Link>
+              </div>
+            )}
           </div>
         )}
 
@@ -156,6 +173,22 @@ function PropertyRequest() {
           </div>
         ) : (
           <form onSubmit={handleSubmit} className="mt-8">
+            {availableProperties.find((p) => p.title === currentProperty) && (
+              <div className="mb-6 rounded-xl border border-indigo-100 bg-indigo-50/70 p-4">
+                <span className="text-xs font-bold uppercase tracking-wider text-indigo-900">
+                  Target Property Selected
+                </span>
+                <p className="mt-1 font-bold text-slate-900">
+                  {availableProperties.find((p) => p.title === currentProperty).title}
+                </p>
+                <p className="mt-0.5 text-xs text-slate-600">
+                  📍 {availableProperties.find((p) => p.title === currentProperty).location} &bull; ₹
+                  {availableProperties.find((p) => p.title === currentProperty).price} / month &bull;{" "}
+                  {availableProperties.find((p) => p.title === currentProperty).type}
+                </p>
+              </div>
+            )}
+
             {/* Name */}
             <div className="mb-5">
               <label htmlFor="request-name" className="mb-2 block font-medium text-slate-700">
