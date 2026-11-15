@@ -1,7 +1,18 @@
 import { test, describe } from "node:test";
 import assert from "node:assert/strict";
 import { properties, filterProperties } from "../src/data/properties.js";
-import { API_URL, authRequest, verifySession, fetchAdminData, checkServerHealth } from "../src/services/api.js";
+import {
+  API_URL,
+  authRequest,
+  verifySession,
+  fetchAdminData,
+  fetchProperties,
+  fetchPropertyById,
+  createProperty,
+  updateProperty,
+  deleteProperty,
+  checkServerHealth,
+} from "../src/services/api.js";
 
 describe("Homezy Client Data & API Contract Checks", () => {
   test("filterProperties filters by search query and category", () => {
@@ -116,28 +127,118 @@ describe("Homezy Client Data & API Contract Checks", () => {
     }
   });
 
+  test("fetchProperties retrieves listings from /api/properties", async () => {
+    const originalFetch = globalThis.fetch;
+    try {
+      globalThis.fetch = async (url) => {
+        assert.ok(url.includes("/properties"));
+        return {
+          ok: true,
+          status: 200,
+          json: async () => ({
+            success: true,
+            properties: [{ id: 101, title: "Mock Villa", location: "Juhu", price: "80,000" }],
+          }),
+        };
+      };
+
+      const props = await fetchProperties({ search: "Juhu" });
+      assert.equal(props.length, 1);
+      assert.equal(props[0].title, "Mock Villa");
+    } finally {
+      globalThis.fetch = originalFetch;
+    }
+  });
+
+  test("fetchPropertyById retrieves single listing details", async () => {
+    const originalFetch = globalThis.fetch;
+    try {
+      globalThis.fetch = async (url) => {
+        assert.ok(url.includes("/properties/101"));
+        return {
+          ok: true,
+          status: 200,
+          json: async () => ({
+            success: true,
+            property: { id: 101, title: "Mock Villa", location: "Juhu", price: "80,000" },
+          }),
+        };
+      };
+
+      const prop = await fetchPropertyById("101");
+      assert.equal(prop.id, 101);
+      assert.equal(prop.title, "Mock Villa");
+    } finally {
+      globalThis.fetch = originalFetch;
+    }
+  });
+
+  test("createProperty, updateProperty, and deleteProperty execute CRUD", async () => {
+    const originalFetch = globalThis.fetch;
+    try {
+      // Create
+      globalThis.fetch = async (url, opts) => {
+        assert.equal(opts.method, "POST");
+        assert.ok(opts.headers.Authorization.includes("test_token"));
+        return {
+          ok: true,
+          status: 201,
+          json: async () => ({
+            success: true,
+            property: { id: "p-new", title: "New Luxury Penthouse" },
+          }),
+        };
+      };
+      const created = await createProperty({ title: "New Luxury Penthouse" }, "test_token");
+      assert.equal(created.id, "p-new");
+
+      // Update
+      globalThis.fetch = async (url, opts) => {
+        assert.equal(opts.method, "PUT");
+        return {
+          ok: true,
+          status: 200,
+          json: async () => ({
+            success: true,
+            property: { id: "p-new", title: "Updated Penthouse" },
+          }),
+        };
+      };
+      const updated = await updateProperty("p-new", { title: "Updated Penthouse" }, "test_token");
+      assert.equal(updated.title, "Updated Penthouse");
+
+      // Delete
+      globalThis.fetch = async (url, opts) => {
+        assert.equal(opts.method, "DELETE");
+        return {
+          ok: true,
+          status: 200,
+          json: async () => ({ success: true }),
+        };
+      };
+      const deleted = await deleteProperty("p-new", "test_token");
+      assert.equal(deleted, true);
+    } finally {
+      globalThis.fetch = originalFetch;
+    }
+  });
+
   test("Independent sessions simulation maintains tab separation", () => {
-    // Simulating two separate tab session stores
     const tab1Session = new Map();
     const tab2Session = new Map();
 
-    // Tab 1 logs in as Admin
     tab1Session.set("token", "admin_jwt_tab_1");
     tab1Session.set("user", JSON.stringify({ name: "Admin One", role: "admin" }));
 
-    // Tab 2 logs in as Tenant
     tab2Session.set("token", "tenant_jwt_tab_2");
     tab2Session.set("user", JSON.stringify({ name: "Tenant Two", role: "tenant" }));
 
-    // Verify Tab 1 session is intact as Admin
     assert.equal(JSON.parse(tab1Session.get("user")).role, "admin");
     assert.equal(tab1Session.get("token"), "admin_jwt_tab_1");
 
-    // Verify Tab 2 session is intact as Tenant
     assert.equal(JSON.parse(tab2Session.get("user")).role, "tenant");
     assert.equal(tab2Session.get("token"), "tenant_jwt_tab_2");
 
-    // Verify Tab 1 logging out does not affect Tab 2
     tab1Session.clear();
     assert.equal(tab1Session.has("token"), false);
     assert.equal(tab2Session.has("token"), true);

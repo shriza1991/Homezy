@@ -49,7 +49,6 @@ export async function verifySession(token) {
     }
 
     if (!response.ok) {
-      // In degraded/offline mode, return null or allow client to keep cache
       return null;
     }
 
@@ -79,6 +78,112 @@ export async function fetchAdminData(token) {
     throw new Error(data?.message || `Admin request failed with status ${response.status}`);
   }
   return data;
+}
+
+/**
+ * Fetch properties from MongoDB backend with search and category filters
+ * @param {Object} [params]
+ * @param {string} [params.search]
+ * @param {string} [params.type]
+ * @param {string} [params.status]
+ */
+export async function fetchProperties(params = {}) {
+  const query = new URLSearchParams();
+  if (params.search && params.search.trim()) query.append("search", params.search.trim());
+  if (params.type && params.type.trim()) query.append("type", params.type.trim());
+  if (params.status && params.status.trim()) query.append("status", params.status.trim());
+
+  const queryString = query.toString();
+  const url = `${API_URL}/properties${queryString ? `?${queryString}` : ""}`;
+
+  const response = await fetch(url);
+  const data = await response.json().catch(() => null);
+  if (!response.ok) {
+    throw new Error(data?.message || "Failed to fetch properties from server");
+  }
+  return data?.properties || [];
+}
+
+/**
+ * Fetch single property details by ID
+ * @param {string} id
+ */
+export async function fetchPropertyById(id) {
+  if (!id) return null;
+  const response = await fetch(`${API_URL}/properties/${id}`);
+  const data = await response.json().catch(() => null);
+  if (!response.ok) {
+    return null;
+  }
+  return data?.property || null;
+}
+
+/**
+ * Create a new property listing (Owners & Admins)
+ * @param {Object} payload
+ * @param {string} token
+ */
+export async function createProperty(payload, token) {
+  if (!token) throw new Error("Authentication token required");
+  const response = await fetch(`${API_URL}/properties`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify(payload),
+  });
+
+  const data = await response.json().catch(() => null);
+  if (!response.ok) {
+    throw new Error(data?.message || "Failed to create property listing");
+  }
+  return data?.property;
+}
+
+/**
+ * Update an existing property listing
+ * @param {string} id
+ * @param {Object} payload
+ * @param {string} token
+ */
+export async function updateProperty(id, payload, token) {
+  if (!token) throw new Error("Authentication token required");
+  const response = await fetch(`${API_URL}/properties/${id}`, {
+    method: "PUT",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify(payload),
+  });
+
+  const data = await response.json().catch(() => null);
+  if (!response.ok) {
+    throw new Error(data?.message || "Failed to update property listing");
+  }
+  return data?.property;
+}
+
+/**
+ * Delete a property listing
+ * @param {string} id
+ * @param {string} token
+ */
+export async function deleteProperty(id, token) {
+  if (!token) throw new Error("Authentication token required");
+  const response = await fetch(`${API_URL}/properties/${id}`, {
+    method: "DELETE",
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
+
+  const data = await response.json().catch(() => null);
+  if (!response.ok) {
+    throw new Error(data?.message || "Failed to delete property listing");
+  }
+  return true;
 }
 
 /**

@@ -1,15 +1,35 @@
 import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { useAuth } from "../hooks/useAuth";
-import { fetchAdminData, checkServerHealth } from "../services/api";
+import {
+  fetchAdminData,
+  checkServerHealth,
+  fetchProperties,
+  createProperty,
+  deleteProperty,
+} from "../services/api";
 
 function AdminDashboard() {
   const { user, token } = useAuth();
   const [adminData, setAdminData] = useState(null);
+  const [propertiesList, setPropertiesList] = useState([]);
   const [healthStatus, setHealthStatus] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [actionMessage, setActionMessage] = useState("");
   const [refreshTrigger, setRefreshTrigger] = useState(0);
+
+  // New property form state
+  const [showAddForm, setShowAddForm] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [newProp, setNewProp] = useState({
+    title: "",
+    location: "",
+    price: "",
+    type: "Apartment",
+    description: "",
+    bedrooms: "2 BHK",
+  });
 
   useEffect(() => {
     let isMounted = true;
@@ -18,7 +38,8 @@ function AdminDashboard() {
     Promise.all([
       fetchAdminData(token).catch((err) => ({ error: err.message })),
       checkServerHealth().catch(() => null),
-    ]).then(([data, health]) => {
+      fetchProperties().catch(() => []),
+    ]).then(([data, health, properties]) => {
       if (!isMounted) return;
       if (data?.error) {
         setError(data.error);
@@ -26,6 +47,7 @@ function AdminDashboard() {
         setAdminData(data);
       }
       setHealthStatus(health);
+      setPropertiesList(properties || []);
       setLoading(false);
     });
 
@@ -37,6 +59,48 @@ function AdminDashboard() {
   const handleRefresh = () => {
     setLoading(true);
     setRefreshTrigger((prev) => prev + 1);
+  };
+
+  const handleCreateProperty = async (e) => {
+    e.preventDefault();
+    if (!newProp.title || !newProp.location || !newProp.price || !newProp.description) {
+      alert("Please fill in all required fields.");
+      return;
+    }
+
+    setIsSubmitting(true);
+    setActionMessage("");
+    try {
+      await createProperty(newProp, token);
+      setActionMessage(`Property "${newProp.title}" created successfully!`);
+      setNewProp({
+        title: "",
+        location: "",
+        price: "",
+        type: "Apartment",
+        description: "",
+        bedrooms: "2 BHK",
+      });
+      setShowAddForm(false);
+      handleRefresh();
+    } catch (err) {
+      alert(`Error creating property: ${err.message}`);
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleDeleteProperty = async (id, title) => {
+    if (!window.confirm(`Are you sure you want to delete listing "${title}"?`)) return;
+
+    setActionMessage("");
+    try {
+      await deleteProperty(id, token);
+      setActionMessage(`Listing "${title}" removed.`);
+      handleRefresh();
+    } catch (err) {
+      alert(`Failed to delete property: ${err.message}`);
+    }
   };
 
   return (
@@ -56,7 +120,13 @@ function AdminDashboard() {
             </p>
           </div>
 
-          <div className="flex items-center gap-3">
+          <div className="flex flex-wrap items-center gap-3">
+            <button
+              onClick={() => setShowAddForm(!showAddForm)}
+              className="rounded-lg bg-emerald-600 px-4 py-2 font-semibold text-white transition hover:bg-emerald-700 shadow-sm"
+            >
+              {showAddForm ? "Cancel" : "+ Add Property Listing"}
+            </button>
             <button
               onClick={handleRefresh}
               disabled={loading}
@@ -68,10 +138,17 @@ function AdminDashboard() {
               to="/properties"
               className="rounded-lg border border-slate-300 bg-white px-4 py-2 font-medium text-slate-700 transition hover:bg-slate-50"
             >
-              View Listings
+              Live Catalog
             </Link>
           </div>
         </div>
+
+        {/* Action / Success Banner */}
+        {actionMessage && (
+          <div className="mt-6 rounded-xl bg-emerald-50 border border-emerald-200 p-4 text-emerald-800 font-medium">
+            ✓ {actionMessage}
+          </div>
+        )}
 
         {/* Tab Session Independence Banner */}
         <div className="mt-6 rounded-xl border border-indigo-100 bg-indigo-50/70 p-5 shadow-sm">
@@ -87,6 +164,94 @@ function AdminDashboard() {
             </div>
           </div>
         </div>
+
+        {/* Add Property Form (Modal / Expandable) */}
+        {showAddForm && (
+          <div className="mt-6 rounded-xl border border-emerald-200 bg-white p-6 shadow-md">
+            <h2 className="text-xl font-bold text-slate-900 mb-4">Add New MongoDB Property Listing</h2>
+            <form onSubmit={handleCreateProperty} className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">Title</label>
+                <input
+                  type="text"
+                  required
+                  placeholder="e.g. Modern Sea-Facing 2 BHK"
+                  value={newProp.title}
+                  onChange={(e) => setNewProp({ ...newProp, title: e.target.value })}
+                  className="w-full rounded-lg border border-slate-300 p-2.5 outline-none focus:border-indigo-500"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">Location</label>
+                <input
+                  type="text"
+                  required
+                  placeholder="e.g. Bandra West, Mumbai"
+                  value={newProp.location}
+                  onChange={(e) => setNewProp({ ...newProp, location: e.target.value })}
+                  className="w-full rounded-lg border border-slate-300 p-2.5 outline-none focus:border-indigo-500"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">Price (₹ / month)</label>
+                <input
+                  type="text"
+                  required
+                  placeholder="e.g. 45,000"
+                  value={newProp.price}
+                  onChange={(e) => setNewProp({ ...newProp, price: e.target.value })}
+                  className="w-full rounded-lg border border-slate-300 p-2.5 outline-none focus:border-indigo-500"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">Property Type</label>
+                <select
+                  value={newProp.type}
+                  onChange={(e) => setNewProp({ ...newProp, type: e.target.value })}
+                  className="w-full rounded-lg border border-slate-300 p-2.5 outline-none focus:border-indigo-500"
+                >
+                  <option value="Apartment">Apartment</option>
+                  <option value="Independent House">Independent House</option>
+                  <option value="Flat">Flat</option>
+                  <option value="Luxury Apartment">Luxury Apartment</option>
+                  <option value="Villa">Villa</option>
+                </select>
+              </div>
+
+              <div className="sm:col-span-2">
+                <label className="block text-sm font-medium text-slate-700 mb-1">Description</label>
+                <textarea
+                  required
+                  rows="3"
+                  placeholder="Describe property features, location advantages, connectivity..."
+                  value={newProp.description}
+                  onChange={(e) => setNewProp({ ...newProp, description: e.target.value })}
+                  className="w-full rounded-lg border border-slate-300 p-2.5 outline-none focus:border-indigo-500"
+                />
+              </div>
+
+              <div className="sm:col-span-2 flex justify-end gap-3">
+                <button
+                  type="button"
+                  onClick={() => setShowAddForm(false)}
+                  className="rounded-lg border border-slate-300 px-5 py-2 font-medium text-slate-600 hover:bg-slate-50"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={isSubmitting}
+                  className="rounded-lg bg-emerald-600 px-6 py-2 font-semibold text-white hover:bg-emerald-700 disabled:opacity-50"
+                >
+                  {isSubmitting ? "Creating..." : "Save to MongoDB"}
+                </button>
+              </div>
+            </form>
+          </div>
+        )}
 
         {error && (
           <div className="mt-6 rounded-xl bg-red-50 p-4 text-red-700 border border-red-200">
@@ -113,11 +278,11 @@ function AdminDashboard() {
           </div>
 
           <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
-            <p className="text-sm font-medium text-slate-500">Live Properties</p>
+            <p className="text-sm font-medium text-slate-500">MongoDB Properties</p>
             <p className="mt-2 text-3xl font-extrabold text-slate-900">
-              {adminData?.stats?.activeListings ?? 4}
+              {propertiesList.length}
             </p>
-            <p className="mt-2 text-xs text-slate-500">Available demo properties</p>
+            <p className="mt-2 text-xs text-slate-500">Live property catalog items</p>
           </div>
 
           <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
@@ -135,6 +300,86 @@ function AdminDashboard() {
             <p className="mt-2 text-xs text-slate-500">
               Database: {healthStatus?.data?.database?.status || "checked via API"}
             </p>
+          </div>
+        </div>
+
+        {/* Property Catalog Management Table */}
+        <div className="mt-10 rounded-xl border border-slate-200 bg-white shadow-sm overflow-hidden">
+          <div className="border-b border-slate-200 px-6 py-4 flex items-center justify-between">
+            <div>
+              <h2 className="text-lg font-bold text-slate-900">Property Catalog Management</h2>
+              <p className="text-sm text-slate-500">
+                List, inspect, and manage properties stored in MongoDB
+              </p>
+            </div>
+            <span className="text-xs font-semibold uppercase text-slate-400">
+              {propertiesList.length} listings
+            </span>
+          </div>
+
+          <div className="overflow-x-auto">
+            <table className="w-full text-left text-sm text-slate-600">
+              <thead className="bg-slate-50 text-xs font-semibold uppercase text-slate-500 border-b border-slate-200">
+                <tr>
+                  <th scope="col" className="px-6 py-3">Property</th>
+                  <th scope="col" className="px-6 py-3">Location</th>
+                  <th scope="col" className="px-6 py-3">Rent</th>
+                  <th scope="col" className="px-6 py-3">Type</th>
+                  <th scope="col" className="px-6 py-3">Status</th>
+                  <th scope="col" className="px-6 py-3 text-right">Actions</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100">
+                {propertiesList.length > 0 ? (
+                  propertiesList.map((p) => {
+                    const propId = p._id || p.id;
+                    return (
+                      <tr key={propId} className="hover:bg-slate-50">
+                        <td className="px-6 py-4 font-medium text-slate-900">
+                          <Link to={`/properties/${propId}`} className="hover:text-indigo-600">
+                            {p.title}
+                          </Link>
+                        </td>
+                        <td className="px-6 py-4">{p.location}</td>
+                        <td className="px-6 py-4 font-semibold text-slate-800">₹{p.price}</td>
+                        <td className="px-6 py-4 text-xs font-medium text-indigo-600">{p.type}</td>
+                        <td className="px-6 py-4">
+                          <span
+                            className={`rounded-full px-2.5 py-0.5 text-xs font-semibold ${
+                              p.status === "Available"
+                                ? "bg-emerald-100 text-emerald-800"
+                                : "bg-amber-100 text-amber-800"
+                            }`}
+                          >
+                            {p.status || "Available"}
+                          </span>
+                        </td>
+                        <td className="px-6 py-4 text-right space-x-2">
+                          <Link
+                            to={`/properties/${propId}`}
+                            className="text-xs font-semibold text-indigo-600 hover:text-indigo-800"
+                          >
+                            View
+                          </Link>
+                          <button
+                            onClick={() => handleDeleteProperty(propId, p.title)}
+                            className="text-xs font-semibold text-red-600 hover:text-red-800 ml-3"
+                          >
+                            Delete
+                          </button>
+                        </td>
+                      </tr>
+                    );
+                  })
+                ) : (
+                  <tr>
+                    <td colSpan="6" className="px-6 py-8 text-center text-slate-500">
+                      {loading ? "Loading properties from MongoDB..." : "No properties found."}
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
           </div>
         </div>
 
