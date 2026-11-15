@@ -187,6 +187,94 @@ export async function deleteProperty(id, token) {
 }
 
 /**
+ * Submit persistent rental request (Tenants)
+ * @param {Object} payload
+ * @param {string} token
+ */
+export async function createRentalRequest(payload, token) {
+  if (!token) throw new Error("Please log in to submit a rental application");
+  const response = await fetch(`${API_URL}/rental-requests`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify(payload),
+  });
+
+  const data = await response.json().catch(() => null);
+  if (!response.ok) {
+    throw new Error(data?.message || `Failed to submit request (HTTP ${response.status})`);
+  }
+  return data?.request;
+}
+
+/**
+ * Fetch authenticated tenant's personal application history
+ * @param {string} token
+ */
+export async function fetchMyRentalRequests(token) {
+  if (!token) return [];
+  const response = await fetch(`${API_URL}/rental-requests/my`, {
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
+
+  const data = await response.json().catch(() => null);
+  if (!response.ok) {
+    throw new Error(data?.message || "Failed to fetch rental request history");
+  }
+  return data?.requests || [];
+}
+
+/**
+ * Fetch all rental requests across the platform (Admin only)
+ * @param {string} token
+ * @param {string} [status]
+ */
+export async function fetchAllRentalRequests(token, status) {
+  if (!token) throw new Error("Authentication token required");
+  const query = status && status !== "all" ? `?status=${encodeURIComponent(status)}` : "";
+  const response = await fetch(`${API_URL}/rental-requests${query}`, {
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
+
+  const data = await response.json().catch(() => null);
+  if (!response.ok) {
+    throw new Error(data?.message || "Failed to fetch platform rental requests");
+  }
+  return data?.requests || [];
+}
+
+/**
+ * Update rental request status: Approve or Reject (Admin only)
+ * @param {string} id
+ * @param {"Approved" | "Rejected" | "Pending"} status
+ * @param {string} token
+ * @param {string} [adminNotes]
+ */
+export async function updateRentalRequestStatus(id, status, token, adminNotes) {
+  if (!token) throw new Error("Authentication token required");
+  const response = await fetch(`${API_URL}/rental-requests/${id}/status`, {
+    method: "PATCH",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify({ status, adminNotes }),
+  });
+
+  const data = await response.json().catch(() => null);
+  if (!response.ok) {
+    throw new Error(data?.message || "Failed to update request status");
+  }
+  return data?.request;
+}
+
+/**
  * Health check helper to verify backend connectivity
  */
 export async function checkServerHealth() {

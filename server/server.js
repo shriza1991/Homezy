@@ -6,6 +6,7 @@ const mongoose = require("mongoose");
 const connectDB = require("./config/db");
 const authRoutes = require("./routes/authRoutes");
 const propertyRoutes = require("./routes/propertyRoutes");
+const rentalRequestRoutes = require("./routes/rentalRequestRoutes");
 const { notFound, errorHandler } = require("./middleware/errorMiddleware");
 
 dotenv.config();
@@ -94,6 +95,7 @@ app.get("/api/health/ready", (req, res) => {
 // Application Routes
 app.use("/api/auth", authRoutes);
 app.use("/api/properties", propertyRoutes);
+app.use("/api/rental-requests", rentalRequestRoutes);
 
 // 404 & Central Error Handling
 app.use(notFound);

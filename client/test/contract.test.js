@@ -11,6 +11,10 @@ import {
   createProperty,
   updateProperty,
   deleteProperty,
+  createRentalRequest,
+  fetchMyRentalRequests,
+  fetchAllRentalRequests,
+  updateRentalRequestStatus,
   checkServerHealth,
 } from "../src/services/api.js";
 
@@ -218,6 +222,81 @@ describe("Homezy Client Data & API Contract Checks", () => {
       };
       const deleted = await deleteProperty("p-new", "test_token");
       assert.equal(deleted, true);
+    } finally {
+      globalThis.fetch = originalFetch;
+    }
+  });
+
+  test("Rental Requests M4: createRentalRequest, fetchMyRentalRequests, fetchAllRentalRequests, updateStatus", async () => {
+    const originalFetch = globalThis.fetch;
+    try {
+      // Create request
+      globalThis.fetch = async (url, opts) => {
+        assert.ok(url.includes("/rental-requests"));
+        assert.equal(opts.method, "POST");
+        const body = JSON.parse(opts.body);
+        assert.equal(body.propertyTitle, "Test Villa");
+        return {
+          ok: true,
+          status: 201,
+          json: async () => ({
+            success: true,
+            request: { _id: "req-1", propertyTitle: "Test Villa", status: "Pending" },
+          }),
+        };
+      };
+      const created = await createRentalRequest({ propertyTitle: "Test Villa" }, "tenant_token");
+      assert.equal(created.status, "Pending");
+
+      // Fetch my requests (tenant history)
+      globalThis.fetch = async (url) => {
+        assert.ok(url.includes("/rental-requests/my"));
+        return {
+          ok: true,
+          status: 200,
+          json: async () => ({
+            success: true,
+            requests: [{ _id: "req-1", propertyTitle: "Test Villa", status: "Pending" }],
+          }),
+        };
+      };
+      const myReqs = await fetchMyRentalRequests("tenant_token");
+      assert.equal(myReqs.length, 1);
+      assert.equal(myReqs[0].propertyTitle, "Test Villa");
+
+      // Fetch all requests (admin overview)
+      globalThis.fetch = async (url) => {
+        assert.ok(url.includes("/rental-requests"));
+        return {
+          ok: true,
+          status: 200,
+          json: async () => ({
+            success: true,
+            requests: [{ _id: "req-1", propertyTitle: "Test Villa", status: "Pending" }],
+          }),
+        };
+      };
+      const allReqs = await fetchAllRentalRequests("admin_token");
+      assert.equal(allReqs.length, 1);
+
+      // Update status (Admin Approval)
+      globalThis.fetch = async (url, opts) => {
+        assert.ok(url.includes("/rental-requests/req-1/status"));
+        assert.equal(opts.method, "PATCH");
+        const body = JSON.parse(opts.body);
+        assert.equal(body.status, "Approved");
+        return {
+          ok: true,
+          status: 200,
+          json: async () => ({
+            success: true,
+            request: { _id: "req-1", status: "Approved", adminNotes: "Approved by Admin" },
+          }),
+        };
+      };
+      const updated = await updateRentalRequestStatus("req-1", "Approved", "admin_token", "Approved by Admin");
+      assert.equal(updated.status, "Approved");
+      assert.equal(updated.adminNotes, "Approved by Admin");
     } finally {
       globalThis.fetch = originalFetch;
     }

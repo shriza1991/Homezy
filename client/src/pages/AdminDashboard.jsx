@@ -7,12 +7,15 @@ import {
   fetchProperties,
   createProperty,
   deleteProperty,
+  fetchAllRentalRequests,
+  updateRentalRequestStatus,
 } from "../services/api";
 
 function AdminDashboard() {
   const { user, token } = useAuth();
   const [adminData, setAdminData] = useState(null);
   const [propertiesList, setPropertiesList] = useState([]);
+  const [rentalRequests, setRentalRequests] = useState([]);
   const [healthStatus, setHealthStatus] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -39,7 +42,8 @@ function AdminDashboard() {
       fetchAdminData(token).catch((err) => ({ error: err.message })),
       checkServerHealth().catch(() => null),
       fetchProperties().catch(() => []),
-    ]).then(([data, health, properties]) => {
+      fetchAllRentalRequests(token).catch(() => []),
+    ]).then(([data, health, properties, requests]) => {
       if (!isMounted) return;
       if (data?.error) {
         setError(data.error);
@@ -48,6 +52,7 @@ function AdminDashboard() {
       }
       setHealthStatus(health);
       setPropertiesList(properties || []);
+      setRentalRequests(requests || []);
       setLoading(false);
     });
 
@@ -102,6 +107,19 @@ function AdminDashboard() {
       alert(`Failed to delete property: ${err.message}`);
     }
   };
+
+  const handleApproveRejectRequest = async (id, status) => {
+    setActionMessage("");
+    try {
+      await updateRentalRequestStatus(id, status, token, `Application ${status.toLowerCase()} by Administrator`);
+      setActionMessage(`Rental request ${status.toLowerCase()} successfully.`);
+      handleRefresh();
+    } catch (err) {
+      alert(`Error updating request: ${err.message}`);
+    }
+  };
+
+  const pendingRequests = rentalRequests.filter((r) => r.status === "Pending");
 
   return (
     <div className="min-h-screen bg-slate-50 px-6 py-10">
@@ -270,11 +288,11 @@ function AdminDashboard() {
           </div>
 
           <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
-            <p className="text-sm font-medium text-slate-500">Tenants / Owners</p>
-            <p className="mt-2 text-3xl font-extrabold text-slate-900">
-              {adminData?.stats ? `${adminData.stats.tenants} / ${adminData.stats.owners}` : (loading ? "..." : "1 / 0")}
+            <p className="text-sm font-medium text-slate-500">Pending Applications</p>
+            <p className="mt-2 text-3xl font-extrabold text-amber-600">
+              {pendingRequests.length}
             </p>
-            <p className="mt-2 text-xs text-slate-500">Active user roles</p>
+            <p className="mt-2 text-xs text-slate-500">Applications awaiting review</p>
           </div>
 
           <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
@@ -300,6 +318,88 @@ function AdminDashboard() {
             <p className="mt-2 text-xs text-slate-500">
               Database: {healthStatus?.data?.database?.status || "checked via API"}
             </p>
+          </div>
+        </div>
+
+        {/* Pending Rental Applications Section */}
+        <div className="mt-10 rounded-xl border border-slate-200 bg-white shadow-sm overflow-hidden">
+          <div className="border-b border-slate-200 px-6 py-4 flex items-center justify-between">
+            <div>
+              <h2 className="text-lg font-bold text-slate-900">Tenant Rental Applications (M4)</h2>
+              <p className="text-sm text-slate-500">
+                Review and approve or reject persistent applications from tenants
+              </p>
+            </div>
+            <Link to="/rental-requests" className="text-xs font-semibold text-indigo-600 hover:text-indigo-800">
+              View All History &rarr;
+            </Link>
+          </div>
+
+          <div className="overflow-x-auto">
+            <table className="w-full text-left text-sm text-slate-600">
+              <thead className="bg-slate-50 text-xs font-semibold uppercase text-slate-500 border-b border-slate-200">
+                <tr>
+                  <th scope="col" className="px-6 py-3">Property</th>
+                  <th scope="col" className="px-6 py-3">Applicant</th>
+                  <th scope="col" className="px-6 py-3">Phone</th>
+                  <th scope="col" className="px-6 py-3">Status</th>
+                  <th scope="col" className="px-6 py-3 text-right">Approval Actions</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100">
+                {rentalRequests.length > 0 ? (
+                  rentalRequests.slice(0, 5).map((req) => {
+                    const reqId = req._id || req.id;
+                    return (
+                      <tr key={reqId} className="hover:bg-slate-50">
+                        <td className="px-6 py-4 font-medium text-slate-900">{req.propertyTitle}</td>
+                        <td className="px-6 py-4">{req.tenantName} ({req.tenantEmail})</td>
+                        <td className="px-6 py-4">{req.tenantPhone}</td>
+                        <td className="px-6 py-4">
+                          <span
+                            className={`rounded-full px-2.5 py-0.5 text-xs font-semibold uppercase ${
+                              req.status === "Approved"
+                                ? "bg-emerald-100 text-emerald-800"
+                                : req.status === "Rejected"
+                                ? "bg-red-100 text-red-800"
+                                : "bg-amber-100 text-amber-800"
+                            }`}
+                          >
+                            {req.status}
+                          </span>
+                        </td>
+                        <td className="px-6 py-4 text-right space-x-2">
+                          {req.status === "Pending" ? (
+                            <>
+                              <button
+                                onClick={() => handleApproveRejectRequest(reqId, "Approved")}
+                                className="rounded bg-emerald-600 px-2.5 py-1 text-xs font-semibold text-white hover:bg-emerald-700"
+                              >
+                                Approve
+                              </button>
+                              <button
+                                onClick={() => handleApproveRejectRequest(reqId, "Rejected")}
+                                className="rounded bg-red-600 px-2.5 py-1 text-xs font-semibold text-white hover:bg-red-700 ml-1.5"
+                              >
+                                Reject
+                              </button>
+                            </>
+                          ) : (
+                            <span className="text-xs text-slate-400 font-medium">Reviewed</span>
+                          )}
+                        </td>
+                      </tr>
+                    );
+                  })
+                ) : (
+                  <tr>
+                    <td colSpan="5" className="px-6 py-8 text-center text-slate-500">
+                      No rental applications submitted yet.
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
           </div>
         </div>
 
