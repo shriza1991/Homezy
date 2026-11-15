@@ -1,5 +1,7 @@
 const express = require("express");
 const http = require("http");
+const path = require("path");
+const fs = require("fs");
 const cors = require("cors");
 const dotenv = require("dotenv");
 const mongoose = require("mongoose");
@@ -44,8 +46,13 @@ const getDatabaseHealth = () => {
   };
 };
 
-// Root route
+// Root route: serves frontend HTML to browsers, and API welcome JSON to API clients
 app.get("/", (req, res) => {
+  const acceptsHtml = req.headers.accept && req.headers.accept.includes("text/html");
+  const clientDist = path.join(__dirname, "../client/dist");
+  if (acceptsHtml && fs.existsSync(path.join(clientDist, "index.html"))) {
+    return res.sendFile(path.join(clientDist, "index.html"));
+  }
   res.json({
     message: "Homezy API is running",
     version: "1.0.0",
@@ -106,6 +113,25 @@ app.post("/api/seed", (req, res, next) => {
   req.url = "/seed";
   demoRoutes(req, res, next);
 });
+
+// Serve frontend static build if client/dist exists
+const clientDist = path.join(__dirname, "../client/dist");
+if (fs.existsSync(clientDist)) {
+  app.use(express.static(clientDist));
+  app.use((req, res, next) => {
+    if (
+      req.method === "GET" &&
+      !req.path.startsWith("/api") &&
+      req.path !== "/health" &&
+      req.path !== "/health/live" &&
+      req.path !== "/health/ready" &&
+      !req.path.startsWith("/socket.io")
+    ) {
+      return res.sendFile(path.join(clientDist, "index.html"));
+    }
+    next();
+  });
+}
 
 // 404 & Central Error Handling
 app.use(notFound);

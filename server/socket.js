@@ -58,8 +58,10 @@ function initSocket(httpServer, customOptions = {}) {
 
     // Ping / heartbeat verification
     socket.on("ping", (callback) => {
+      const payload = { status: "pong", timestamp: Date.now() };
+      socket.emit("pong", payload);
       if (typeof callback === "function") {
-        callback({ status: "pong", timestamp: Date.now() });
+        callback(payload);
       }
     });
 

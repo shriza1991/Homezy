@@ -1,7 +1,16 @@
-// Resolve backend API URL from environment variable or default to local backend
+// Resolve backend API URL from window override, environment variable, or default to local backend
 const getBaseApiUrl = () => {
+  if (typeof window !== "undefined" && window.__HOMEZY_API_URL__) {
+    return window.__HOMEZY_API_URL__.replace(/\/+$/, "");
+  }
   const envUrl = typeof import.meta !== "undefined" && import.meta.env && import.meta.env.VITE_API_URL;
-  return (envUrl || "http://localhost:5000/api").replace(/\/+$/, "");
+  if (envUrl) {
+    return envUrl.replace(/\/+$/, "");
+  }
+  if (typeof window !== "undefined" && window.location && window.location.origin && !window.location.port.includes("5173")) {
+    return `${window.location.origin}/api`;
+  }
+  return "http://localhost:5000/api";
 };
 
 export const API_URL = getBaseApiUrl();
@@ -406,4 +415,28 @@ export async function checkServerHealth() {
   } catch (error) {
     return { ok: false, status: 0, error: error.message };
   }
+}
+
+/**
+ * Trigger demo dataset reset & seeding
+ */
+export async function seedDemoData() {
+  const rootUrl = API_URL.endsWith("/api") ? API_URL.slice(0, -4) : API_URL;
+  const response = await fetch(`${rootUrl}/api/demo/seed`, { method: "POST" });
+  if (!response.ok) {
+    throw new Error("Failed to seed demo data");
+  }
+  return response.json();
+}
+
+/**
+ * Retrieve demo status and pre-configured accounts
+ */
+export async function fetchDemoStatus() {
+  const rootUrl = API_URL.endsWith("/api") ? API_URL.slice(0, -4) : API_URL;
+  const response = await fetch(`${rootUrl}/api/demo/status`);
+  if (!response.ok) {
+    throw new Error("Failed to fetch demo status");
+  }
+  return response.json();
 }

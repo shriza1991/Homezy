@@ -55,10 +55,14 @@ function PropertyRequest() {
   };
 
   const handleDemoFill = () => {
-    const defaultProp = availableProperties[0]?.title || "Modern 2 BHK Apartment";
+    const defaultProp =
+      availableProperties.find((p) => p.title.includes("Cozy"))?.title ||
+      availableProperties.find((p) => !p.title.includes("Modern"))?.title ||
+      availableProperties[0]?.title ||
+      "Cozy 1 BHK Flat";
     setFormData((prev) => ({
       ...prev,
-      property: prev.property || defaultProp,
+      property: defaultProp,
       phone: prev.phone || "9876543210",
       moveInDate: todayStr,
       message: "Hello, I am interested in this rental listing for a 1-year lease. Please review my application.",

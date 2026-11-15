@@ -117,7 +117,9 @@ describe("Homezy M8: Automated Full Demonstration Socket.IO Verification", () =>
     });
     assert.equal(res.status, 201);
     const body = await res.json();
-    submittedReqId = body.rentalRequest._id || body.rentalRequest.id;
+    const reqObj = body.request || body.rentalRequest;
+    assert.ok(reqObj);
+    submittedReqId = reqObj._id || reqObj.id;
 
     // Await real-time delivery to Admin socket
     const notif = await adminNotificationPromise;

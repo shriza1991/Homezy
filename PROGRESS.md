@@ -12,6 +12,65 @@
 | **Milestone 5 (M5)** | Complete admin and tenant interfaces so the property and rental-request flow works entirely through the website | **COMPLETED** | **48/48 Passed** (36 server, 12 client) |
 | **Milestone 6 (M6)** | Authenticated Socket.IO notifications, persisted notification history, unread counts, and reliable reconnect behavior | **COMPLETED** | **60/60 Passed** (46 server, 14 client) |
 | **Milestone 7 (M7)** | Polish responsiveness, validation feedback, navigation, and all demonstration interactions across phone, tablet, and desktop | **COMPLETED** | **62/62 Passed** (46 server, 16 client) |
+| **Milestone 8 (M8)** | Repeatable demo accounts/data, automated API, Socket.IO, and headless browser verification of full demonstration | **COMPLETED** | **84/84 Passed** (62 server, 17 client, 5 browser) |
+
+---
+
+## Milestone 8 Implementation Checklist
+
+### 1. Repeatable Demo Accounts & Seeding Infrastructure
+- [x] `server/services/demoService.js` & `server/routes/demoRoutes.js`:
+  - **Canonical Pre-Configured Demo Accounts**:
+    - **Tenant**: `Demo Tenant` (`tenant@homezy.com` / `password123`)
+    - **Admin**: `Demo Admin` (`admin@homezy.com` / `password123`)
+    - **Owner**: `Demo Owner` (`owner@homezy.com` / `password123`)
+  - **Deterministic Demo Dataset**:
+    - 4 catalog properties (Andheri, Powai, Bandra, Worli).
+    - 2 sample rental applications (1 Pending, 1 Approved with feedback notes).
+    - 2 sample notifications (application submitted alert for Admin, application approved alert for Tenant).
+  - **Dual Persistence / In-Memory Resilience**:
+    - Connected Mode: Hashes passwords with bcrypt and persists directly into MongoDB Atlas.
+    - Disconnected / Fallback Mode: Deterministically seeds in-memory data structures (`memoryUsers`, `memoryProperties`, `memoryRentalRequests`, `memoryNotifications`) ensuring zero downtime during offline demonstrations or CI testing.
+  - **Demo Management API Endpoints**:
+    - `POST /api/demo/seed` & `POST /api/seed`: Resets and seeds the canonical dataset.
+    - `GET /api/demo/status`: Returns current counts and status.
+    - `GET /api/demo/accounts`: Returns demo credentials and roles.
+- [x] CLI Seeding Tool:
+  - `server/scripts/seed.js` executable via `npm run seed` across the repository.
+
+### 2. Automated API Verification (`server/test/demoApi.test.js`)
+- [x] Automated end-to-end API test suite validating the entire lifecycle:
+  - Dataset seeding and status inspection via `/api/demo/seed` and `/api/demo/status`.
+  - Tenant, Admin, and Owner logins returning valid JWT tokens.
+  - Verified session restoration via `/api/auth/me`.
+  - Property catalog browsing, text search, and category filtering.
+  - Tenant rental application submission (HTTP 201 Created).
+  - Duplicate application prevention (HTTP 409 Conflict).
+  - Tenant personal history retrieval via `/api/rental-requests/my`.
+  - Admin inspection of all applications via `/api/rental-requests`.
+  - Admin application approval with custom notes and status change to "Approved" (HTTP 200 OK).
+  - Tenant confirms updated "Approved" status and admin feedback.
+  - Notifications lifecycle (fetch, unread count, and mark as read).
+  - Access validation: Non-owner blocked from other tenant's request with HTTP 403 Forbidden.
+
+### 3. Automated Socket.IO Verification (`server/test/demoSocket.test.js`)
+- [x] Real-time event delivery test suite validating Socket.IO pipeline:
+  - Authenticated JWT handshake for Tenant and Admin sockets.
+  - Ping/Pong heartbeat verification.
+  - Real-time `application_submitted` event emitted to Admin room upon tenant submission.
+  - Real-time `application_approved` event emitted to Tenant room upon admin approval.
+  - Socket disconnect, reconnect, and re-authentication resilience.
+
+### 4. Automated Headless Browser Verification (`test/demoBrowser.test.js`)
+- [x] Real browser demonstration verification in headless Google Chrome (`puppeteer-core`):
+  - **Landing Page**: Verifies page load, document title, and navbar brand.
+  - **Catalog Browsing**: Tests search filtering and category chip click interaction.
+  - **1-Click Demo Tenant Login**: Clicks `Demo Tenant`, verifies autofilled credentials, logs in, and verifies session badge in navbar.
+  - **Application Flow**: Navigates to `/property-request`, clicks `⚡ 1-Click Sample Data`, submits request, verifies confirmation.
+  - **Admin Multi-Tab Session**: Opens independent browser context, logs in as `Demo Admin`, verifies Admin Dashboard metrics, reviews pending application, approves it with notes.
+  - **Real-Time Cross-Session Verification**: Tenant session reloads/checks `/rental-requests`, confirms "Approved" status and admin feedback notes.
+  - **Notification Bell Dropdown**: Opens notification bell popover in navbar, verifying alerts.
+  - **Responsive Mobile Viewport (375x667)**: Toggles hamburger drawer menu, verifies navigation links, and closes drawer.
 
 ---
 
@@ -171,18 +230,30 @@ All checks executed locally using Node v22.20.0 and npm 10.9.3:
    - `Socket client helper manages lifecycle and handlers cleanly` -> **PASS**
    - `Validation contracts: phone format, password length, and password match logic` -> **PASS**
    - `Responsiveness & Quick Filter Chips: filterProperties accurately categorizes catalog listings` -> **PASS**
-   - **Result: 16/16 passed**
+   - `Demo Management API contracts: seedDemoData and fetchDemoStatus` -> **PASS**
+   - **Result: 17/17 passed**
 
-3. **Client Linter (`npm run client:lint`)**:
+3. **Automated Headless Browser Verification (`npm run test:demo`)** &rarr; **5/5 Passed**:
+   - `1. Landing Page Load, Title, and Navbar Verification` -> **PASS**
+   - `2. Catalog Browsing & Search/Category Filter Interaction` -> **PASS**
+   - `3. 1-Click Demo Tenant Login & Session Display` -> **PASS**
+   - `4. Complete Demonstration Rental Application & Admin Approval Flow` -> **PASS**
+   - `5. Mobile Responsive Viewport & Hamburger Menu Interaction` -> **PASS**
+   - **Result: 5/5 passed**
+
+4. **Full Test Suite (`npm test`)**:
+   - Total automated tests: **84/84 Passed across 10 test suites** (62 server, 17 client, 5 browser)
+
+5. **Client Linter (`npm run client:lint`)**:
    - `eslint .` -> **0 errors, 0 warnings (PASS)**
 
-4. **Client Production Build (`npm run client:build`)**:
-   - `vite build` -> **Built successfully in 9.75s (PASS)**
+6. **Client Production Build (`npm run client:build`)**:
+   - `vite build` -> **Built successfully in 889ms (PASS)**
 
 ---
 
 ## Remaining Manual Setup for MongoDB Atlas
 
-*Note: Live Atlas cloud services were not claimed to be tested because live Atlas credentials require manual user provisioning.*
+*Note: Live Atlas cloud credentials in `server/.env` connect directly to your cluster, with in-memory fallback automatically protecting all tests and offline demonstrations.*
 
-To connect the application to your live MongoDB Atlas cluster, follow the steps in [README.md](file:///c:/Users/dyara/Homezy/README.md#mongodb-atlas-setup-guide) to configure `server/.env`.
+To customize or connect the application to an alternate MongoDB Atlas cluster, follow the steps in [README.md](file:///c:/Users/dyara/Homezy/README.md#mongodb-atlas-setup-guide) to configure `server/.env`.

@@ -22,6 +22,8 @@ import {
   markAllNotificationsAsRead,
   deleteNotification,
   checkServerHealth,
+  seedDemoData,
+  fetchDemoStatus,
 } from "../src/services/api.js";
 import { connectSocket, disconnectSocket } from "../src/services/socket.js";
 
@@ -519,5 +521,42 @@ describe("Homezy Client Data & API Contract Checks", () => {
     const aptInAndheri = filterProperties(properties, "andheri", "Apartment");
     assert.equal(aptInAndheri.length, 1);
     assert.equal(aptInAndheri[0].id, 1);
+  });
+
+  test("Demo Management API contracts: seedDemoData and fetchDemoStatus", async () => {
+    const originalFetch = globalThis.fetch;
+    try {
+      globalThis.fetch = async (url, opts) => {
+        if (url.includes("/api/demo/seed")) {
+          assert.equal(opts.method, "POST");
+          return {
+            ok: true,
+            status: 200,
+            json: async () => ({ success: true, message: "Demo data seeded" }),
+          };
+        }
+        if (url.includes("/api/demo/status")) {
+          return {
+            ok: true,
+            status: 200,
+            json: async () => ({
+              success: true,
+              counts: { users: 3, properties: 4, rentalRequests: 2, notifications: 2 },
+            }),
+          };
+        }
+        throw new Error("Unexpected URL: " + url);
+      };
+
+      const seedRes = await seedDemoData();
+      assert.equal(seedRes.success, true);
+
+      const statusRes = await fetchDemoStatus();
+      assert.equal(statusRes.success, true);
+      assert.equal(statusRes.counts.users, 3);
+      assert.equal(statusRes.counts.properties, 4);
+    } finally {
+      globalThis.fetch = originalFetch;
+    }
   });
 });

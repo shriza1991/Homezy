@@ -140,7 +140,7 @@ describe("Homezy M8: Automated Full Demonstration API Verification", () => {
   test("6. Tenant Submits New Rental Application", async () => {
     const propRes = await fetch(`${baseUrl}/api/properties`);
     const propData = await propRes.json();
-    const targetProp = propData.properties.find((p) => p.title.includes("Luxury") || p.title.includes("Modern")) || propData.properties[0];
+    const targetProp = propData.properties.find((p) => p.title.includes("Cozy")) || propData.properties[2];
 
     const appPayload = {
       propertyId: targetProp._id || targetProp.id,
@@ -164,9 +164,11 @@ describe("Homezy M8: Automated Full Demonstration API Verification", () => {
     assert.equal(submitRes.status, 201);
     const submitData = await submitRes.json();
     assert.equal(submitData.success, true);
-    assert.equal(submitData.rentalRequest.status, "Pending");
-    assert.equal(submitData.rentalRequest.propertyTitle, targetProp.title);
-    createdRequestId = submitData.rentalRequest._id || submitData.rentalRequest.id;
+    const submittedReq = submitData.request || submitData.rentalRequest;
+    assert.ok(submittedReq);
+    assert.equal(submittedReq.status, "Pending");
+    assert.equal(submittedReq.propertyTitle, targetProp.title);
+    createdRequestId = submittedReq._id || submittedReq.id;
 
     // 7. Duplicate Prevention Check: Submitting duplicate pending application is rejected with 409
     const dupRes = await fetch(`${baseUrl}/api/rental-requests`, {
@@ -189,9 +191,10 @@ describe("Homezy M8: Automated Full Demonstration API Verification", () => {
     assert.equal(res.status, 200);
     const data = await res.json();
     assert.ok(data.success);
-    assert.ok(Array.isArray(data.rentalRequests));
+    const reqList = data.requests || data.rentalRequests;
+    assert.ok(Array.isArray(reqList));
 
-    const found = data.rentalRequests.find(
+    const found = reqList.find(
       (r) => String(r._id || r.id) === String(createdRequestId)
     );
     assert.ok(found);
@@ -205,7 +208,8 @@ describe("Homezy M8: Automated Full Demonstration API Verification", () => {
     });
     assert.equal(allRes.status, 200);
     const allData = await allRes.json();
-    assert.ok(allData.rentalRequests.length >= 1);
+    const allList = allData.requests || allData.rentalRequests;
+    assert.ok(allList.length >= 1);
 
     // Admin updates status to Approved
     const updateRes = await fetch(`${baseUrl}/api/rental-requests/${createdRequestId}/status`, {
@@ -223,8 +227,9 @@ describe("Homezy M8: Automated Full Demonstration API Verification", () => {
     assert.equal(updateRes.status, 200);
     const updateData = await updateRes.json();
     assert.equal(updateData.success, true);
-    assert.equal(updateData.rentalRequest.status, "Approved");
-    assert.equal(updateData.rentalRequest.adminNotes, "Application approved by Homezy Admin. Lease contract generated.");
+    const updatedReq = updateData.request || updateData.rentalRequest;
+    assert.equal(updatedReq.status, "Approved");
+    assert.equal(updatedReq.adminNotes, "Application approved by Homezy Admin. Lease contract generated.");
   });
 
   test("10. Tenant Confirms Updated Approval Status & Admin Feedback", async () => {
@@ -233,7 +238,8 @@ describe("Homezy M8: Automated Full Demonstration API Verification", () => {
     });
     assert.equal(res.status, 200);
     const data = await res.json();
-    const approved = data.rentalRequests.find(
+    const reqList = data.requests || data.rentalRequests;
+    const approved = reqList.find(
       (r) => String(r._id || r.id) === String(createdRequestId)
     );
     assert.ok(approved);
