@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { useAuth } from "../hooks/useAuth";
+import { getPropertyImage } from "../utils/propertyImages";
 import {
   fetchAdminData,
   checkServerHealth,
@@ -765,9 +766,16 @@ function AdminDashboard() {
                     return (
                       <tr key={propId} className="hover:bg-slate-50">
                         <td className="px-6 py-4 font-medium text-slate-900">
-                          <Link to={`/properties/${propId}`} className="hover:text-indigo-600">
-                            {p.title}
-                          </Link>
+                          <div className="flex items-center gap-3">
+                            <img
+                              src={getPropertyImage(p)}
+                              alt={p.title}
+                              className="h-10 w-12 rounded-lg object-cover border border-slate-200 shrink-0"
+                            />
+                            <Link to={`/properties/${propId}`} className="hover:text-indigo-600 font-semibold line-clamp-1">
+                              {p.title}
+                            </Link>
+                          </div>
                         </td>
                         <td className="px-6 py-4">{p.location}</td>
                         <td className="px-6 py-4 font-semibold text-slate-800">₹{p.price}</td>

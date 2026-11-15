@@ -3,6 +3,7 @@ import { useParams, Link } from "react-router-dom";
 import { fetchPropertyById, fetchMyRentalRequests } from "../services/api";
 import { properties as fallbackProperties } from "../data/properties";
 import { useAuth } from "../hooks/useAuth";
+import { getPropertyImage, getPropertyGallery } from "../utils/propertyImages";
 
 function PropertyDetails() {
   const { id } = useParams();
@@ -10,6 +11,7 @@ function PropertyDetails() {
   const [property, setProperty] = useState(null);
   const [loading, setLoading] = useState(true);
   const [existingRequest, setExistingRequest] = useState(null);
+  const [activePhoto, setActivePhoto] = useState(null);
 
   useEffect(() => {
     let isMounted = true;
@@ -116,12 +118,79 @@ function PropertyDetails() {
           <span className="font-semibold text-slate-800 truncate max-w-[200px] sm:max-w-none">{property.title}</span>
         </div>
 
-        {/* Property Hero Banner */}
-        <div className="h-56 sm:h-80 rounded-2xl bg-gradient-to-r from-indigo-600 via-indigo-700 to-purple-700 flex flex-col items-center justify-center shadow-lg text-white p-6 text-center">
-          <span className="text-4xl sm:text-5xl">🏡</span>
-          <h2 className="mt-3 text-2xl sm:text-3xl font-extrabold tracking-tight">{property.title}</h2>
-          <p className="mt-1 sm:mt-2 text-indigo-100 text-sm sm:text-lg">📍 {property.location}</p>
-        </div>
+        {/* Property Hero Visual Banner with High-Res Image */}
+        {(() => {
+          const gallery = getPropertyGallery(property);
+          const currentPhoto = activePhoto || gallery[0] || getPropertyImage(property);
+
+          return (
+            <div>
+              <div className="relative h-64 sm:h-96 rounded-2xl overflow-hidden shadow-lg bg-slate-900">
+                <img
+                  src={currentPhoto}
+                  alt={property.title}
+                  className="h-full w-full object-cover transition duration-500"
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-slate-950/85 via-slate-900/30 to-black/30" />
+
+                {/* Floating Property Type Badge */}
+                <div className="absolute top-4 left-4 flex items-center gap-2">
+                  <span className="rounded-full bg-black/60 px-3.5 py-1 text-xs font-bold text-white backdrop-blur-md">
+                    🏷️ {property.type || "Apartment"}
+                  </span>
+                </div>
+
+                {/* Floating Status Badge */}
+                <div className="absolute top-4 right-4">
+                  <span
+                    className={`rounded-full px-4 py-1.5 text-xs font-bold uppercase tracking-wider shadow-md backdrop-blur-md ${
+                      property.status === "Available"
+                        ? "bg-emerald-500/90 text-white border border-emerald-400"
+                        : "bg-amber-500/90 text-white border border-amber-400"
+                    }`}
+                  >
+                    {property.status || "Available"}
+                  </span>
+                </div>
+
+                {/* Bottom Overlay Title & Location */}
+                <div className="absolute bottom-6 left-6 right-6 text-white">
+                  <h1 className="text-2xl sm:text-4xl font-extrabold tracking-tight drop-shadow-md">
+                    {property.title}
+                  </h1>
+                  <p className="mt-1 sm:mt-2 text-slate-200 text-sm sm:text-base flex items-center gap-1.5">
+                    <span>📍</span> {property.location}
+                  </p>
+                </div>
+              </div>
+
+              {/* Gallery Thumbnails Strip */}
+              {gallery.length > 1 && (
+                <div className="mt-3 flex items-center gap-3 overflow-x-auto pb-1">
+                  {gallery.map((imgUrl, idx) => (
+                    <button
+                      key={idx}
+                      type="button"
+                      onClick={() => setActivePhoto(imgUrl)}
+                      className={`relative h-18 w-26 shrink-0 overflow-hidden rounded-xl border-2 transition cursor-pointer ${
+                        currentPhoto === imgUrl
+                          ? "border-indigo-600 ring-2 ring-indigo-500/40 shadow-md"
+                          : "border-slate-200 opacity-70 hover:opacity-100"
+                      }`}
+                      aria-label={`View photo ${idx + 1}`}
+                    >
+                      <img
+                        src={imgUrl}
+                        alt={`${property.title} view ${idx + 1}`}
+                        className="h-full w-full object-cover"
+                      />
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+          );
+        })()}
 
         {/* Property Information Grid */}
         <div className="mt-6 sm:mt-8 grid grid-cols-1 gap-6 sm:gap-8 lg:grid-cols-3">
