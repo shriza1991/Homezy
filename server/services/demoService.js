@@ -68,8 +68,12 @@ const seedDemoData = async () => {
     const adminUser = createdUsers.find((u) => u.role === "admin");
     const ownerUser = createdUsers.find((u) => u.role === "owner");
 
-    // 3. Insert Canonical Properties
-    const createdProperties = await Property.insertMany(initialPropertiesSeed);
+    // 3. Insert Canonical Properties (assigned to demo owner)
+    const propertiesWithOwner = initialPropertiesSeed.map((p) => ({
+      ...p,
+      owner: ownerUser?._id || null,
+    }));
+    const createdProperties = await Property.insertMany(propertiesWithOwner);
 
     // 4. Insert Canonical Rental Requests
     const sampleRentalRequests = [
@@ -151,12 +155,14 @@ const seedDemoData = async () => {
 
   const tenantMem = memUsers.find((u) => u.role === "tenant");
   const adminMem = memUsers.find((u) => u.role === "admin");
+  const ownerMem = memUsers.find((u) => u.role === "owner");
 
-  // 2. Reset memory properties
+  // 2. Reset memory properties (assigned to demo owner)
   const memProperties = initialPropertiesSeed.map((p, idx) => ({
     ...p,
     _id: `mem-prop-${idx + 1}`,
     id: idx + 1,
+    owner: ownerMem?._id || "demo-owner-id",
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
   }));

@@ -82,6 +82,7 @@ let memoryProperties = initialPropertiesSeed.map((p, idx) => ({
   ...p,
   _id: `mem-${idx + 1}`,
   id: idx + 1,
+  owner: "demo-owner-id",
   createdAt: new Date().toISOString(),
   updatedAt: new Date().toISOString(),
 }));
@@ -473,6 +474,7 @@ const resetMemoryProperties = (newProps) => {
         ...p,
         _id: `mem-${idx + 1}`,
         id: idx + 1,
+        owner: "demo-owner-id",
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
       }));

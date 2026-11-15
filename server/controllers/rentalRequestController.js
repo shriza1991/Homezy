@@ -48,13 +48,19 @@ const createRentalRequest = async (req, res) => {
         });
       }
 
-      // Check if property exists to associate property ObjectId
+      // Check if property exists to associate property ObjectId and retrieve owner
       let propertyRef = null;
+      let propertyOwnerId = null;
       if (propertyId && mongoose.isValidObjectId(propertyId)) {
         propertyRef = propertyId;
+        const foundProp = await Property.findById(propertyId);
+        if (foundProp && foundProp.owner) propertyOwnerId = foundProp.owner.toString();
       } else {
         const foundProp = await Property.findOne({ title: new RegExp(`^${cleanTitle}$`, "i") });
-        if (foundProp) propertyRef = foundProp._id;
+        if (foundProp) {
+          propertyRef = foundProp._id;
+          if (foundProp.owner) propertyOwnerId = foundProp.owner.toString();
+        }
       }
 
       const request = await RentalRequest.create({
@@ -80,6 +86,18 @@ const createRentalRequest = async (req, res) => {
         type: "application_submitted",
         relatedId: String(request._id),
       }).catch(() => {});
+
+      // Notify property owner if assigned
+      if (propertyOwnerId && propertyOwnerId !== tenantId) {
+        createAndEmitNotification({
+          recipient: propertyOwnerId,
+          sender: tenantId,
+          title: "New Rental Application",
+          message: `${tenantName} submitted an application for your property "${cleanTitle}".`,
+          type: "application_submitted",
+          relatedId: String(request._id),
+        }).catch(() => {});
+      }
 
       return res.status(201).json({
         success: true,
@@ -122,6 +140,17 @@ const createRentalRequest = async (req, res) => {
 
     memoryRentalRequests.unshift(newMemRequest);
 
+    // In-memory mode: resolve property owner
+    const { getMemoryProperties } = require("./propertyController");
+    const currentProps = getMemoryProperties();
+    const foundMemProp = currentProps.find(
+      (p) =>
+        String(p._id) === String(propertyId) ||
+        String(p.id) === String(propertyId) ||
+        p.title.toLowerCase() === cleanTitle.toLowerCase()
+    );
+    const memPropertyOwnerId = foundMemProp && foundMemProp.owner ? String(foundMemProp.owner) : null;
+
     // Notify administrator in in-memory mode
     createAndEmitNotification({
       recipient: "admin",
@@ -131,6 +160,18 @@ const createRentalRequest = async (req, res) => {
       type: "application_submitted",
       relatedId: String(newMemRequest._id),
     }).catch(() => {});
+
+    // Notify property owner in in-memory mode
+    if (memPropertyOwnerId && memPropertyOwnerId !== String(tenantId)) {
+      createAndEmitNotification({
+        recipient: memPropertyOwnerId,
+        sender: tenantId,
+        title: "New Rental Application",
+        message: `${tenantName} submitted an application for your property "${cleanTitle}".`,
+        type: "application_submitted",
+        relatedId: String(newMemRequest._id),
+      }).catch(() => {});
+    }
 
     res.status(201).json({
       success: true,
