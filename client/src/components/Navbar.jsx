@@ -28,14 +28,24 @@ function Navbar() {
           </Link>
 
           {isAuthenticated ? (
-            <>
-              <span>Welcome, {user.name}</span>
-              <button onClick={logout} className="transition hover:text-yellow-300">Logout</button>
-            </>
+            <div className="flex items-center gap-4">
+              {user?.name && <span className="text-slate-100">Welcome, {user.name}</span>}
+              <button
+                type="button"
+                onClick={logout}
+                className="transition hover:text-yellow-300"
+              >
+                Logout
+              </button>
+            </div>
           ) : (
             <>
-              <Link to="/login" className="transition hover:text-yellow-300">Login</Link>
-              <Link to="/register" className="transition hover:text-yellow-300">Register</Link>
+              <Link to="/login" className="transition hover:text-yellow-300">
+                Login
+              </Link>
+              <Link to="/register" className="transition hover:text-yellow-300">
+                Register
+              </Link>
             </>
           )}
         </div>

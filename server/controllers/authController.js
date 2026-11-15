@@ -1,9 +1,16 @@
+const mongoose = require("mongoose");
 const User = require("../models/User");
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 
 // Register User
 const registerUser = async (req, res) => {
+  if (mongoose.connection.readyState !== 1) {
+    return res.status(503).json({
+      message: "Database service is not connected. Please verify MongoDB Atlas configuration.",
+    });
+  }
+
   try {
     const { name, email, phone, role, password } = req.body;
 
@@ -47,6 +54,12 @@ const registerUser = async (req, res) => {
 
 // Login User
 const loginUser = async (req, res) => {
+  if (mongoose.connection.readyState !== 1) {
+    return res.status(503).json({
+      message: "Database service is not connected. Please verify MongoDB Atlas configuration.",
+    });
+  }
+
   try {
     const { email, password } = req.body;
 
@@ -77,7 +90,7 @@ const loginUser = async (req, res) => {
         id: user._id,
         role: user.role,
       },
-      process.env.JWT_SECRET,
+      process.env.JWT_SECRET || "homezy_development_secret_key",
       {
         expiresIn: "1d",
       }
