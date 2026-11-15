@@ -77,12 +77,20 @@ const initialPropertiesSeed = [
   },
 ];
 
+// Canonical mapping of default demo properties to individual demo owners
+const defaultDemoOwnerIds = [
+  "demo-owner-1-id", // Modern 2 BHK Apartment
+  "demo-owner-2-id", // Spacious 3 BHK House
+  "demo-owner-3-id", // Cozy 1 BHK Flat
+  "demo-owner-4-id", // Luxury 2 BHK Apartment
+];
+
 // In-memory property store for tests or disconnected mode
 let memoryProperties = initialPropertiesSeed.map((p, idx) => ({
   ...p,
   _id: `mem-${idx + 1}`,
   id: idx + 1,
-  owner: "demo-owner-id",
+  owner: defaultDemoOwnerIds[idx] || "demo-owner-1-id",
   createdAt: new Date().toISOString(),
   updatedAt: new Date().toISOString(),
 }));
@@ -467,6 +475,7 @@ const resetMemoryProperties = (newProps) => {
         ...p,
         _id: p._id || `mem-${idx + 1}`,
         id: p.id || idx + 1,
+        owner: p.owner || defaultDemoOwnerIds[idx] || "demo-owner-1-id",
         createdAt: p.createdAt || new Date().toISOString(),
         updatedAt: p.updatedAt || new Date().toISOString(),
       }))
@@ -474,7 +483,7 @@ const resetMemoryProperties = (newProps) => {
         ...p,
         _id: `mem-${idx + 1}`,
         id: idx + 1,
-        owner: "demo-owner-id",
+        owner: defaultDemoOwnerIds[idx] || "demo-owner-1-id",
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
       }));

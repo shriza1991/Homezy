@@ -21,8 +21,24 @@ function Login() {
       setEmail("admin@homezy.com");
       setPassword("password123");
       setDemoNotice("Filled Demo Administrator credentials. Click 'Login' to proceed.");
+    } else if (demoRole === "owner1") {
+      setEmail("owner1@homezy.com");
+      setPassword("password123");
+      setDemoNotice("Filled Demo Owner 1 credentials (owns Modern 2 BHK Apartment). Click 'Login' to proceed.");
+    } else if (demoRole === "owner2") {
+      setEmail("owner2@homezy.com");
+      setPassword("password123");
+      setDemoNotice("Filled Demo Owner 2 credentials (owns Spacious 3 BHK House). Click 'Login' to proceed.");
+    } else if (demoRole === "owner3") {
+      setEmail("owner3@homezy.com");
+      setPassword("password123");
+      setDemoNotice("Filled Demo Owner 3 credentials (owns Cozy 1 BHK Flat). Click 'Login' to proceed.");
+    } else if (demoRole === "owner4") {
+      setEmail("owner4@homezy.com");
+      setPassword("password123");
+      setDemoNotice("Filled Demo Owner 4 credentials (owns Luxury 2 BHK Apartment). Click 'Login' to proceed.");
     } else if (demoRole === "owner") {
-      setEmail("owner@homezy.com");
+      setEmail("owner1@homezy.com");
       setPassword("password123");
       setDemoNotice("Filled Demo Property Owner credentials. Click 'Login' to proceed.");
     } else {
@@ -94,10 +110,35 @@ function Login() {
             </button>
             <button
               type="button"
-              onClick={() => handleDemoFill("owner")}
+              onClick={() => handleDemoFill("owner1")}
               className="rounded-lg bg-white px-2.5 py-1 text-xs font-semibold text-blue-700 shadow-sm border border-blue-200 hover:bg-blue-50 transition"
+              title="Modern 2 BHK Apartment (Andheri)"
             >
-              Demo Owner
+              Owner 1 (2 BHK)
+            </button>
+            <button
+              type="button"
+              onClick={() => handleDemoFill("owner2")}
+              className="rounded-lg bg-white px-2.5 py-1 text-xs font-semibold text-blue-700 shadow-sm border border-blue-200 hover:bg-blue-50 transition"
+              title="Spacious 3 BHK House (Powai)"
+            >
+              Owner 2 (3 BHK)
+            </button>
+            <button
+              type="button"
+              onClick={() => handleDemoFill("owner3")}
+              className="rounded-lg bg-white px-2.5 py-1 text-xs font-semibold text-blue-700 shadow-sm border border-blue-200 hover:bg-blue-50 transition"
+              title="Cozy 1 BHK Flat (Bandra)"
+            >
+              Owner 3 (1 BHK)
+            </button>
+            <button
+              type="button"
+              onClick={() => handleDemoFill("owner4")}
+              className="rounded-lg bg-white px-2.5 py-1 text-xs font-semibold text-blue-700 shadow-sm border border-blue-200 hover:bg-blue-50 transition"
+              title="Luxury 2 BHK Apartment (Worli)"
+            >
+              Owner 4 (Luxury)
             </button>
           </div>
         </div>

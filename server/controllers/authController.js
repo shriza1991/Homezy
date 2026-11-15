@@ -41,8 +41,44 @@ const defaultDemoUsers = [
     password: "password123",
   },
   {
-    _id: "demo-owner-id",
-    id: "demo-owner-id",
+    _id: "demo-owner-1-id",
+    id: "demo-owner-1-id",
+    name: "Demo Owner 1 (Modern 2 BHK)",
+    email: "owner1@homezy.com",
+    phone: "9876543212",
+    role: "owner",
+    password: "password123",
+  },
+  {
+    _id: "demo-owner-2-id",
+    id: "demo-owner-2-id",
+    name: "Demo Owner 2 (Spacious 3 BHK)",
+    email: "owner2@homezy.com",
+    phone: "9876543213",
+    role: "owner",
+    password: "password123",
+  },
+  {
+    _id: "demo-owner-3-id",
+    id: "demo-owner-3-id",
+    name: "Demo Owner 3 (Cozy 1 BHK)",
+    email: "owner3@homezy.com",
+    phone: "9876543214",
+    role: "owner",
+    password: "password123",
+  },
+  {
+    _id: "demo-owner-4-id",
+    id: "demo-owner-4-id",
+    name: "Demo Owner 4 (Luxury 2 BHK)",
+    email: "owner4@homezy.com",
+    phone: "9876543215",
+    role: "owner",
+    password: "password123",
+  },
+  {
+    _id: "demo-owner-1-id",
+    id: "demo-owner-1-id",
     name: "Demo Owner",
     email: "owner@homezy.com",
     phone: "9876543212",
@@ -173,7 +209,24 @@ const loginUser = async (req, res) => {
 
     if (mongoose.connection.readyState === 1) {
       // Find user in MongoDB
-      const user = await User.findOne({ email: normalizedEmail });
+      let user = await User.findOne({ email: normalizedEmail });
+
+      // Auto-provision demo account if logging in with valid demo credentials
+      if (!user && password === "password123") {
+        const canonicalDemo = defaultDemoUsers.find(
+          (u) => u.email.toLowerCase() === normalizedEmail
+        );
+        if (canonicalDemo) {
+          const hashedPassword = await bcrypt.hash("password123", 10);
+          user = await User.create({
+            name: canonicalDemo.name,
+            email: canonicalDemo.email,
+            phone: canonicalDemo.phone,
+            role: canonicalDemo.role,
+            password: hashedPassword,
+          });
+        }
+      }
 
       if (!user) {
         return res.status(401).json({

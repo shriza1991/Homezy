@@ -27,7 +27,35 @@ const demoAccounts = [
     password: "password123",
   },
   {
-    name: "Demo Owner",
+    name: "Demo Owner 1 (Modern 2 BHK)",
+    email: "owner1@homezy.com",
+    phone: "9876543212",
+    role: "owner",
+    password: "password123",
+  },
+  {
+    name: "Demo Owner 2 (Spacious 3 BHK)",
+    email: "owner2@homezy.com",
+    phone: "9876543213",
+    role: "owner",
+    password: "password123",
+  },
+  {
+    name: "Demo Owner 3 (Cozy 1 BHK)",
+    email: "owner3@homezy.com",
+    phone: "9876543214",
+    role: "owner",
+    password: "password123",
+  },
+  {
+    name: "Demo Owner 4 (Luxury 2 BHK)",
+    email: "owner4@homezy.com",
+    phone: "9876543215",
+    role: "owner",
+    password: "password123",
+  },
+  {
+    name: "Demo Owner (Legacy)",
     email: "owner@homezy.com",
     phone: "9876543212",
     role: "owner",
@@ -66,14 +94,19 @@ const seedDemoData = async () => {
 
     const tenantUser = createdUsers.find((u) => u.role === "tenant");
     const adminUser = createdUsers.find((u) => u.role === "admin");
-    const ownerUser = createdUsers.find((u) => u.role === "owner");
+    const ownerUsers = [
+      createdUsers.find((u) => u.email === "owner1@homezy.com") || createdUsers.find((u) => u.email === "owner@homezy.com"),
+      createdUsers.find((u) => u.email === "owner2@homezy.com"),
+      createdUsers.find((u) => u.email === "owner3@homezy.com"),
+      createdUsers.find((u) => u.email === "owner4@homezy.com"),
+    ];
 
-    // 3. Insert Canonical Properties (assigned to demo owner)
-    const propertiesWithOwner = initialPropertiesSeed.map((p) => ({
+    // 3. Insert Canonical Properties (each assigned to its respective demo owner)
+    const propertiesWithOwners = initialPropertiesSeed.map((p, idx) => ({
       ...p,
-      owner: ownerUser?._id || null,
+      owner: ownerUsers[idx]?._id || ownerUsers[0]?._id,
     }));
-    const createdProperties = await Property.insertMany(propertiesWithOwner);
+    const createdProperties = await Property.insertMany(propertiesWithOwners);
 
     // 4. Insert Canonical Rental Requests
     const sampleRentalRequests = [
@@ -155,14 +188,19 @@ const seedDemoData = async () => {
 
   const tenantMem = memUsers.find((u) => u.role === "tenant");
   const adminMem = memUsers.find((u) => u.role === "admin");
-  const ownerMem = memUsers.find((u) => u.role === "owner");
+  const ownerMems = [
+    memUsers.find((u) => u.email === "owner1@homezy.com") || memUsers.find((u) => u.role === "owner"),
+    memUsers.find((u) => u.email === "owner2@homezy.com"),
+    memUsers.find((u) => u.email === "owner3@homezy.com"),
+    memUsers.find((u) => u.email === "owner4@homezy.com"),
+  ];
 
-  // 2. Reset memory properties (assigned to demo owner)
+  // 2. Reset memory properties (each assigned to its respective demo owner)
   const memProperties = initialPropertiesSeed.map((p, idx) => ({
     ...p,
     _id: `mem-prop-${idx + 1}`,
     id: idx + 1,
-    owner: ownerMem?._id || "demo-owner-id",
+    owner: ownerMems[idx]?._id || `demo-owner-${idx + 1}-id`,
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
   }));
