@@ -2,6 +2,7 @@ const mongoose = require("mongoose");
 const User = require("../models/User");
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
+const { getJwtSecret } = require("../config/jwt");
 
 // Generate JWT token with standard claims
 const createToken = (user) => {
@@ -12,7 +13,7 @@ const createToken = (user) => {
       email: user.email,
       name: user.name,
     },
-    process.env.JWT_SECRET || "homezy_development_secret_key",
+    getJwtSecret(),
     {
       expiresIn: "1d",
     }
@@ -72,8 +73,16 @@ const registerUser = async (req, res) => {
       });
     }
 
-    const validRoles = ["tenant", "owner", "admin"];
-    const userRole = role && validRoles.includes(role) ? role : "tenant";
+    // Reject public registration with role admin
+    if (role && role.toString().trim().toLowerCase() === "admin") {
+      return res.status(403).json({
+        message: "Registration with role 'admin' is not permitted",
+      });
+    }
+
+    const validRoles = ["tenant", "owner"];
+    const normalizedRole = role ? role.toString().trim().toLowerCase() : "";
+    const userRole = validRoles.includes(normalizedRole) ? normalizedRole : "tenant";
 
     if (mongoose.connection.readyState === 1) {
       // Check if user already exists in MongoDB

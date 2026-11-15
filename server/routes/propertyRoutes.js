@@ -8,6 +8,7 @@ const {
   seedProperties,
 } = require("../controllers/propertyController");
 const { protect, authorize } = require("../middleware/authMiddleware");
+const { blockInProduction } = require("../middleware/productionGuard");
 
 const router = express.Router();
 
@@ -15,8 +16,8 @@ const router = express.Router();
 router.get("/", getProperties);
 router.get("/:id", getPropertyById);
 
-// Database seeding helper
-router.post("/seed", seedProperties);
+// Database seeding helper (disabled in production)
+router.post("/seed", blockInProduction, seedProperties);
 
 // Protected property management routes (owners and admins only)
 router.post("/", protect, authorize("owner", "admin"), createProperty);

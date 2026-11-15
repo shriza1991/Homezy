@@ -1,6 +1,7 @@
 const jwt = require("jsonwebtoken");
 const mongoose = require("mongoose");
 const User = require("../models/User");
+const { getJwtSecret } = require("../config/jwt");
 
 /**
  * Protect routes - Verifies JWT from Authorization header: 'Bearer <token>'
@@ -23,7 +24,7 @@ const protect = async (req, res, next) => {
   try {
     const decoded = jwt.verify(
       token,
-      process.env.JWT_SECRET || "homezy_development_secret_key"
+      getJwtSecret()
     );
 
     // If database is connected, load latest user record

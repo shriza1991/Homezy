@@ -1,5 +1,6 @@
 const { Server } = require("socket.io");
 const jwt = require("jsonwebtoken");
+const { getJwtSecret } = require("./config/jwt");
 
 let io = null;
 
@@ -12,7 +13,11 @@ function initSocket(httpServer, customOptions = {}) {
   const clientOrigin = process.env.CLIENT_ORIGIN;
   const corsConfig =
     clientOrigin && clientOrigin !== "*"
-      ? { origin: clientOrigin.split(",").map((s) => s.trim()), credentials: true }
+      ? {
+          origin: clientOrigin.split(",").map((s) => s.trim().replace(/\/+$/, "")).filter(Boolean),
+          credentials: true,
+          methods: ["GET", "POST"],
+        }
       : { origin: "*", methods: ["GET", "POST"] };
 
   io = new Server(httpServer, {
@@ -34,8 +39,7 @@ function initSocket(httpServer, customOptions = {}) {
         return next(new Error("Authentication error: Token required"));
       }
 
-      const secret = process.env.JWT_SECRET || "homezy_development_secret_key";
-      const decoded = jwt.verify(token, secret);
+      const decoded = jwt.verify(token, getJwtSecret());
       socket.user = decoded;
       next();
     } catch (error) {

@@ -178,8 +178,7 @@ function AdminDashboard() {
       });
 
       setActionMessage(
-        `Application for "${reviewModal.propertyTitle}" marked as ${reviewModal.status}.${
-          reviewModal.updatePropertyStatus ? " Property status set to Rented." : ""
+        `Application for "${reviewModal.propertyTitle}" marked as ${reviewModal.status}.${reviewModal.updatePropertyStatus ? " Property status set to Rented." : ""
         }`
       );
       setReviewModal(null);
@@ -577,11 +576,10 @@ function AdminDashboard() {
                   <button
                     type="submit"
                     disabled={isSubmitting}
-                    className={`rounded-lg px-5 py-2 text-xs font-semibold text-white shadow-sm disabled:opacity-50 ${
-                      reviewModal.status === "Approved"
+                    className={`rounded-lg px-5 py-2 text-xs font-semibold text-white shadow-sm disabled:opacity-50 ${reviewModal.status === "Approved"
                         ? "bg-emerald-600 hover:bg-emerald-700"
                         : "bg-red-600 hover:bg-red-700"
-                    }`}
+                      }`}
                   >
                     {isSubmitting
                       ? "Saving..."
@@ -629,9 +627,8 @@ function AdminDashboard() {
             <p className="text-sm font-medium text-slate-500">Backend API Health</p>
             <div className="mt-2 flex items-center gap-2">
               <span
-                className={`h-3 w-3 rounded-full ${
-                  healthStatus?.ok ? "bg-emerald-500" : "bg-amber-500"
-                }`}
+                className={`h-3 w-3 rounded-full ${healthStatus?.ok ? "bg-emerald-500" : "bg-amber-500"
+                  }`}
               />
               <p className="text-2xl font-bold text-slate-900">
                 {healthStatus?.ok ? "Healthy" : "Connecting..."}
@@ -681,13 +678,12 @@ function AdminDashboard() {
                         <td className="px-6 py-4">{req.tenantPhone || "Not specified"}</td>
                         <td className="px-6 py-4">
                           <span
-                            className={`rounded-full px-2.5 py-0.5 text-xs font-semibold uppercase ${
-                              req.status === "Approved"
+                            className={`rounded-full px-2.5 py-0.5 text-xs font-semibold uppercase ${req.status === "Approved"
                                 ? "bg-emerald-100 text-emerald-800"
                                 : req.status === "Rejected"
-                                ? "bg-red-100 text-red-800"
-                                : "bg-amber-100 text-amber-800"
-                            }`}
+                                  ? "bg-red-100 text-red-800"
+                                  : "bg-amber-100 text-amber-800"
+                              }`}
                           >
                             {req.status}
                           </span>
@@ -782,11 +778,10 @@ function AdminDashboard() {
                         <td className="px-6 py-4 text-xs font-medium text-indigo-600">{p.type}</td>
                         <td className="px-6 py-4">
                           <span
-                            className={`rounded-full px-2.5 py-0.5 text-xs font-semibold ${
-                              p.status === "Available"
+                            className={`rounded-full px-2.5 py-0.5 text-xs font-semibold ${p.status === "Available"
                                 ? "bg-emerald-100 text-emerald-800"
                                 : "bg-amber-100 text-amber-800"
-                            }`}
+                              }`}
                           >
                             {p.status || "Available"}
                           </span>
@@ -853,13 +848,12 @@ function AdminDashboard() {
                       <td className="px-6 py-4">{u.email}</td>
                       <td className="px-6 py-4">
                         <span
-                          className={`rounded-full px-2.5 py-0.5 text-xs font-semibold uppercase ${
-                            u.role === "admin"
+                          className={`rounded-full px-2.5 py-0.5 text-xs font-semibold uppercase ${u.role === "admin"
                               ? "bg-purple-100 text-purple-700"
                               : u.role === "owner"
-                              ? "bg-blue-100 text-blue-700"
-                              : "bg-emerald-100 text-emerald-700"
-                          }`}
+                                ? "bg-blue-100 text-blue-700"
+                                : "bg-emerald-100 text-emerald-700"
+                            }`}
                         >
                           {u.role}
                         </span>

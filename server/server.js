@@ -14,15 +14,25 @@ const notificationRoutes = require("./routes/notificationRoutes");
 const demoRoutes = require("./routes/demoRoutes");
 const { initSocket, getIO } = require("./socket");
 const { notFound, errorHandler } = require("./middleware/errorMiddleware");
+const { getJwtSecret } = require("./config/jwt");
+const { blockInProduction } = require("./middleware/productionGuard");
 
 dotenv.config();
 
 const app = express();
 
-// Configurable CORS
+// Configurable CORS supporting single or comma-delimited origins
 const clientOrigin = process.env.CLIENT_ORIGIN;
-const corsOptions = clientOrigin && clientOrigin !== "*"
-  ? { origin: clientOrigin.split(",").map((s) => s.trim()), credentials: true }
+const parsedOrigins =
+  clientOrigin && clientOrigin !== "*"
+    ? clientOrigin
+        .split(",")
+        .map((s) => s.trim().replace(/\/+$/, ""))
+        .filter(Boolean)
+    : null;
+
+const corsOptions = parsedOrigins
+  ? { origin: parsedOrigins, credentials: true }
   : { origin: true, credentials: true };
 
 app.use(cors(corsOptions));
@@ -109,7 +119,7 @@ app.use("/api/properties", propertyRoutes);
 app.use("/api/rental-requests", rentalRequestRoutes);
 app.use("/api/notifications", notificationRoutes);
 app.use("/api/demo", demoRoutes);
-app.post("/api/seed", (req, res, next) => {
+app.post("/api/seed", blockInProduction, (req, res, next) => {
   req.url = "/seed";
   demoRoutes(req, res, next);
 });
@@ -146,14 +156,24 @@ const createHttpServer = (customApp = app) => {
 
 // Server startup function
 const startServer = async (customPort) => {
-  const port = customPort || process.env.PORT || 5000;
+  const port = customPort || (process.env.PORT ? parseInt(process.env.PORT, 10) : 5000);
+
+  // Validate strict production requirements
+  if (process.env.NODE_ENV === "production") {
+    try {
+      getJwtSecret();
+    } catch (err) {
+      console.error(`[Homezy] Startup Aborted: ${err.message}`);
+      throw err;
+    }
+  }
 
   // Initiate database connection
   await connectDB();
 
   const { server } = createHttpServer(app);
 
-  server.listen(port, () => {
+  server.listen(port, "0.0.0.0", () => {
     console.log(`[Homezy] Server running in ${process.env.NODE_ENV || "development"} mode on port ${port}`);
   });
 

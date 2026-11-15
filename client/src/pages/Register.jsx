@@ -168,7 +168,6 @@ function Register() {
               >
                 <option value="tenant">Tenant (Browse & Rent Properties)</option>
                 <option value="owner">Owner (List & Manage Properties)</option>
-                <option value="admin">Administrator (Platform Review & Management)</option>
               </select>
             </div>
 

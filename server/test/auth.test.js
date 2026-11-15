@@ -108,6 +108,23 @@ describe("Homezy JWT Authentication & Authorization Tests", () => {
     assert.ok([400, 503].includes(res.status));
   });
 
+  test("POST /api/auth/register rejects public registration with role admin (403)", async () => {
+    const res = await fetch(`${baseUrl}/api/auth/register`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        name: "Malicious Admin Wannabe",
+        email: "hacker@example.com",
+        phone: "9998887776",
+        role: "admin",
+        password: "secretpassword123",
+      }),
+    });
+    assert.equal(res.status, 403);
+    const data = await res.json();
+    assert.match(data.message, /role 'admin' is not permitted/i);
+  });
+
   test("POST /api/auth/login validates required email/password", async () => {
     const res = await fetch(`${baseUrl}/api/auth/login`, {
       method: "POST",

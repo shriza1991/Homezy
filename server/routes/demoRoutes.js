@@ -1,7 +1,11 @@
 const express = require("express");
 const { seedDemoData, getDemoStatus, demoAccounts } = require("../services/demoService");
+const { blockInProduction } = require("../middleware/productionGuard");
 
 const router = express.Router();
+
+// Guard all demo endpoints in production environment
+router.use(blockInProduction);
 
 // POST /api/demo/seed - Resets and seeds demo accounts, catalog, rental requests, notifications
 router.post("/seed", async (req, res) => {
