@@ -29,6 +29,59 @@ export async function authRequest(action, payload) {
 }
 
 /**
+ * Verify JWT session token with the backend (Verified Session Restoration)
+ * @param {string} token
+ * @returns {Promise<{id: string, name: string, email: string, role: string} | null>}
+ */
+export async function verifySession(token) {
+  if (!token) return null;
+  try {
+    const response = await fetch(`${API_URL}/auth/me`, {
+      method: "GET",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+    });
+
+    if (response.status === 401 || response.status === 403) {
+      return null;
+    }
+
+    if (!response.ok) {
+      // In degraded/offline mode, return null or allow client to keep cache
+      return null;
+    }
+
+    const data = await response.json().catch(() => null);
+    return data?.user || null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Fetch admin-authorized dashboard data
+ * @param {string} token
+ */
+export async function fetchAdminData(token) {
+  if (!token) throw new Error("Authentication token required");
+  const response = await fetch(`${API_URL}/auth/admin/dashboard`, {
+    method: "GET",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+    },
+  });
+
+  const data = await response.json().catch(() => null);
+  if (!response.ok) {
+    throw new Error(data?.message || `Admin request failed with status ${response.status}`);
+  }
+  return data;
+}
+
+/**
  * Health check helper to verify backend connectivity
  */
 export async function checkServerHealth() {

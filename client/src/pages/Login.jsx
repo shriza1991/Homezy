@@ -1,5 +1,5 @@
 import { useRef, useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useLocation } from "react-router-dom";
 
 import { useAuth } from "../hooks/useAuth";
 
@@ -12,6 +12,7 @@ function Login() {
   const [message, setMessage] = useState("");
 
   const navigate = useNavigate();
+  const location = useLocation();
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -21,8 +22,9 @@ function Login() {
     setLoading(true);
     setMessage("");
     try {
-      await login(email, password);
-      navigate("/");
+      const result = await login(email, password);
+      const destination = location.state?.from?.pathname || (result?.user?.role === "admin" ? "/admin" : "/");
+      navigate(destination, { replace: true });
     } catch (error) {
       setMessage(error.message);
     } finally {
@@ -32,7 +34,7 @@ function Login() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-100 flex items-center justify-center px-6">
+    <div className="min-h-screen bg-slate-100 flex items-center justify-center px-6 py-12">
       <div className="w-full max-w-md rounded-xl bg-white p-8 shadow-lg">
         <h1 className="text-3xl font-bold text-slate-900 text-center">
           Welcome to Homezy
@@ -94,7 +96,7 @@ function Login() {
 
           {/* Message */}
           {message && (
-            <p role="alert" className="mb-5 rounded-lg bg-slate-100 px-4 py-3 text-center text-sm text-slate-700">
+            <p role="alert" className="mb-5 rounded-lg bg-red-50 p-3 text-center text-sm text-red-700">
               {message}
             </p>
           )}
@@ -103,7 +105,7 @@ function Login() {
           <button
             type="submit"
             disabled={loading}
-            className="w-full rounded-lg bg-indigo-600 px-6 py-3 font-semibold text-white transition hover:bg-indigo-700"
+            className="w-full rounded-lg bg-indigo-600 px-6 py-3 font-semibold text-white transition hover:bg-indigo-700 disabled:opacity-50"
           >
             {loading ? "Logging in..." : "Login"}
           </button>

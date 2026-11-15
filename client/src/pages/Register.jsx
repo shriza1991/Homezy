@@ -59,6 +59,7 @@ function Register() {
               <select id="register-role" name="role" value={form.role} onChange={handleChange} className="w-full rounded-lg border px-4 py-2 focus:ring-2 focus:ring-indigo-500">
                 <option value="tenant">Tenant</option>
                 <option value="owner">Owner</option>
+                <option value="admin">Admin</option>
               </select>
             </div>
             {error && <p role="alert" className="rounded-lg bg-red-50 p-3 text-red-700">{error}</p>}

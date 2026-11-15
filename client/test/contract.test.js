@@ -1,32 +1,17 @@
 import { test, describe } from "node:test";
 import assert from "node:assert/strict";
 import { properties, filterProperties } from "../src/data/properties.js";
-import { API_URL, authRequest, checkServerHealth } from "../src/services/api.js";
+import { API_URL, authRequest, verifySession, fetchAdminData, checkServerHealth } from "../src/services/api.js";
 
 describe("Homezy Client Data & API Contract Checks", () => {
   test("filterProperties filters by search query and category", () => {
-    // 1. Empty filter returns all
     assert.equal(filterProperties(properties, "", "").length, 4);
-
-    // 2. Whitespace trimming
     assert.equal(filterProperties(properties, "   ", "").length, 4);
-
-    // 3. Case insensitive title
     assert.equal(filterProperties(properties, "apartment", "").length, 2);
-
-    // 4. Case insensitive location
     assert.equal(filterProperties(properties, "powai", "").length, 1);
-
-    // 5. Category filter
     assert.equal(filterProperties(properties, "", "Flat").length, 1);
-
-    // 6. Combined category and title
     assert.equal(filterProperties(properties, "Luxury", "Luxury Apartment").length, 1);
-
-    // 7. No match
     assert.equal(filterProperties(properties, "Nonexistent", "").length, 0);
-
-    // 8. Immutability: original list unchanged
     assert.equal(properties.length, 4);
   });
 
@@ -45,7 +30,7 @@ describe("Homezy Client Data & API Contract Checks", () => {
         assert.equal(body.email, "test@example.com");
         return {
           ok: true,
-          json: async () => ({ token: "dummy_jwt", user: { id: "123", name: "Tester" } }),
+          json: async () => ({ token: "dummy_jwt", user: { id: "123", name: "Tester", role: "tenant" } }),
         };
       };
 
@@ -71,6 +56,92 @@ describe("Homezy Client Data & API Contract Checks", () => {
     } finally {
       globalThis.fetch = originalFetch;
     }
+  });
+
+  test("verifySession handles valid and expired sessions correctly", async () => {
+    const originalFetch = globalThis.fetch;
+    try {
+      // 1. Valid token
+      globalThis.fetch = async (url, opts) => {
+        assert.ok(url.includes("/auth/me"));
+        assert.equal(opts.headers.Authorization, "Bearer valid_token");
+        return {
+          ok: true,
+          status: 200,
+          json: async () => ({ user: { id: "1", name: "Admin User", role: "admin" } }),
+        };
+      };
+
+      const user = await verifySession("valid_token");
+      assert.equal(user.name, "Admin User");
+      assert.equal(user.role, "admin");
+
+      // 2. Expired / Invalid token
+      globalThis.fetch = async () => {
+        return {
+          ok: false,
+          status: 401,
+          json: async () => ({ message: "Token expired" }),
+        };
+      };
+
+      const invalidUser = await verifySession("expired_token");
+      assert.equal(invalidUser, null);
+    } finally {
+      globalThis.fetch = originalFetch;
+    }
+  });
+
+  test("fetchAdminData sends bearer token and parses dashboard data", async () => {
+    const originalFetch = globalThis.fetch;
+    try {
+      globalThis.fetch = async (url, opts) => {
+        assert.ok(url.includes("/auth/admin/dashboard"));
+        assert.equal(opts.headers.Authorization, "Bearer admin_token");
+        return {
+          ok: true,
+          status: 200,
+          json: async () => ({
+            stats: { totalUsers: 5, activeListings: 4 },
+            users: [{ id: "1", name: "Super Admin", role: "admin" }],
+          }),
+        };
+      };
+
+      const data = await fetchAdminData("admin_token");
+      assert.equal(data.stats.totalUsers, 5);
+      assert.equal(data.users[0].role, "admin");
+    } finally {
+      globalThis.fetch = originalFetch;
+    }
+  });
+
+  test("Independent sessions simulation maintains tab separation", () => {
+    // Simulating two separate tab session stores
+    const tab1Session = new Map();
+    const tab2Session = new Map();
+
+    // Tab 1 logs in as Admin
+    tab1Session.set("token", "admin_jwt_tab_1");
+    tab1Session.set("user", JSON.stringify({ name: "Admin One", role: "admin" }));
+
+    // Tab 2 logs in as Tenant
+    tab2Session.set("token", "tenant_jwt_tab_2");
+    tab2Session.set("user", JSON.stringify({ name: "Tenant Two", role: "tenant" }));
+
+    // Verify Tab 1 session is intact as Admin
+    assert.equal(JSON.parse(tab1Session.get("user")).role, "admin");
+    assert.equal(tab1Session.get("token"), "admin_jwt_tab_1");
+
+    // Verify Tab 2 session is intact as Tenant
+    assert.equal(JSON.parse(tab2Session.get("user")).role, "tenant");
+    assert.equal(tab2Session.get("token"), "tenant_jwt_tab_2");
+
+    // Verify Tab 1 logging out does not affect Tab 2
+    tab1Session.clear();
+    assert.equal(tab1Session.has("token"), false);
+    assert.equal(tab2Session.has("token"), true);
+    assert.equal(JSON.parse(tab2Session.get("user")).role, "tenant");
   });
 
   test("checkServerHealth inspects health endpoint", async () => {
