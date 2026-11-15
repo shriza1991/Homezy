@@ -94,7 +94,7 @@ function NotificationBell() {
 
       {/* Notifications Dropdown Panel */}
       {isOpen && (
-        <div className="absolute right-0 mt-2 w-80 sm:w-96 rounded-2xl bg-white shadow-2xl ring-1 ring-black/5 z-50 overflow-hidden text-slate-800 border border-slate-200">
+        <div className="fixed inset-x-3 top-16 sm:absolute sm:inset-auto sm:right-0 sm:top-full sm:mt-2 sm:w-96 rounded-2xl bg-white shadow-2xl ring-1 ring-black/5 z-50 overflow-hidden text-slate-800 border border-slate-200 animate-fadeIn">
           {/* Header */}
           <div className="border-b border-slate-100 bg-slate-50 px-4 py-3 flex items-center justify-between">
             <div className="flex items-center gap-2">

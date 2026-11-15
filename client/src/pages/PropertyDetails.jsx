@@ -105,30 +105,30 @@ function PropertyDetails() {
     : ["Parking", "Wi-Fi", "Security", "Lift"];
 
   return (
-    <div className="min-h-screen bg-slate-100 px-6 py-10">
+    <div className="min-h-screen bg-slate-100 px-4 py-6 sm:px-6 sm:py-10">
       <div className="mx-auto max-w-6xl">
         {/* Breadcrumb Navigation */}
-        <div className="mb-6 flex items-center gap-2 text-sm text-slate-500">
+        <div className="mb-4 sm:mb-6 flex items-center gap-2 text-xs sm:text-sm text-slate-500">
           <Link to="/" className="hover:text-indigo-600">Home</Link>
           <span>/</span>
           <Link to="/properties" className="hover:text-indigo-600">Properties</Link>
           <span>/</span>
-          <span className="font-medium text-slate-800">{property.title}</span>
+          <span className="font-semibold text-slate-800 truncate max-w-[200px] sm:max-w-none">{property.title}</span>
         </div>
 
         {/* Property Hero Banner */}
-        <div className="h-80 rounded-2xl bg-gradient-to-r from-indigo-600 via-indigo-700 to-purple-700 flex flex-col items-center justify-center shadow-lg text-white p-6 text-center">
-          <span className="text-5xl">🏡</span>
-          <h2 className="mt-4 text-3xl font-bold tracking-tight">{property.title}</h2>
-          <p className="mt-2 text-indigo-100 text-lg">📍 {property.location}</p>
+        <div className="h-56 sm:h-80 rounded-2xl bg-gradient-to-r from-indigo-600 via-indigo-700 to-purple-700 flex flex-col items-center justify-center shadow-lg text-white p-6 text-center">
+          <span className="text-4xl sm:text-5xl">🏡</span>
+          <h2 className="mt-3 text-2xl sm:text-3xl font-extrabold tracking-tight">{property.title}</h2>
+          <p className="mt-1 sm:mt-2 text-indigo-100 text-sm sm:text-lg">📍 {property.location}</p>
         </div>
 
         {/* Property Information Grid */}
-        <div className="mt-8 grid grid-cols-1 gap-8 lg:grid-cols-3">
+        <div className="mt-6 sm:mt-8 grid grid-cols-1 gap-6 sm:gap-8 lg:grid-cols-3">
           {/* Main Details Column */}
-          <div className="rounded-2xl bg-white p-8 shadow-sm lg:col-span-2 border border-slate-200">
+          <div className="rounded-2xl bg-white p-5 sm:p-8 shadow-sm lg:col-span-2 border border-slate-200">
             <div className="flex flex-wrap items-center justify-between gap-3">
-              <h1 className="text-3xl font-extrabold text-slate-900">
+              <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-900">
                 {property.title}
               </h1>
 

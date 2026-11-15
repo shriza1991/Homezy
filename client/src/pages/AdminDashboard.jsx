@@ -208,45 +208,45 @@ function AdminDashboard() {
   const pendingRequests = rentalRequests.filter((r) => r.status === "Pending");
 
   return (
-    <div className="min-h-screen bg-slate-50 px-6 py-10">
+    <div className="min-h-screen bg-slate-50 px-4 py-6 sm:px-6 sm:py-10">
       <div className="mx-auto max-w-7xl">
         {/* Header */}
         <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
           <div>
             <div className="flex items-center gap-3">
-              <h1 className="text-3xl font-bold text-slate-900">Admin Dashboard</h1>
+              <h1 className="text-2xl sm:text-3xl font-bold text-slate-900">Admin Dashboard</h1>
               <span className="rounded-full bg-purple-100 px-3 py-1 text-xs font-bold uppercase tracking-wider text-purple-700">
                 Administrator
               </span>
             </div>
-            <p className="mt-1 text-slate-600">
+            <p className="mt-1 text-sm sm:text-base text-slate-600">
               Logged in as <strong className="text-slate-800">{user?.name}</strong> ({user?.email})
             </p>
           </div>
 
-          <div className="flex flex-wrap items-center gap-3">
+          <div className="flex flex-wrap items-center gap-2 sm:gap-3">
             <button
               onClick={() => setShowAddForm(!showAddForm)}
-              className="rounded-lg bg-emerald-600 px-4 py-2 font-semibold text-white transition hover:bg-emerald-700 shadow-sm text-sm"
+              className="rounded-lg bg-emerald-600 px-3.5 py-2 font-semibold text-white transition hover:bg-emerald-700 shadow-sm text-xs sm:text-sm"
             >
               {showAddForm ? "Cancel" : "+ Add Property Listing"}
             </button>
             <button
               onClick={handleRefresh}
               disabled={loading}
-              className="rounded-lg bg-indigo-600 px-4 py-2 font-semibold text-white transition hover:bg-indigo-700 disabled:opacity-50 text-sm"
+              className="rounded-lg bg-indigo-600 px-3.5 py-2 font-semibold text-white transition hover:bg-indigo-700 disabled:opacity-50 text-xs sm:text-sm"
             >
               {loading ? "Refreshing..." : "Refresh Stats"}
             </button>
             <Link
               to="/rental-requests"
-              className="rounded-lg border border-indigo-300 bg-indigo-50 px-4 py-2 font-semibold text-indigo-700 transition hover:bg-indigo-100 text-sm"
+              className="rounded-lg border border-indigo-300 bg-indigo-50 px-3.5 py-2 font-semibold text-indigo-700 transition hover:bg-indigo-100 text-xs sm:text-sm"
             >
               All Applications ({rentalRequests.length})
             </Link>
             <Link
               to="/properties"
-              className="rounded-lg border border-slate-300 bg-white px-4 py-2 font-medium text-slate-700 transition hover:bg-slate-50 text-sm"
+              className="rounded-lg border border-slate-300 bg-white px-3.5 py-2 font-medium text-slate-700 transition hover:bg-slate-50 text-xs sm:text-sm"
             >
               Live Catalog
             </Link>
@@ -255,8 +255,15 @@ function AdminDashboard() {
 
         {/* Action / Success Banner */}
         {actionMessage && (
-          <div className="mt-6 rounded-xl bg-emerald-50 border border-emerald-200 p-4 text-emerald-800 font-medium">
-            ✓ {actionMessage}
+          <div className="mt-6 flex items-center justify-between rounded-xl bg-emerald-50 border border-emerald-200 p-4 text-emerald-800 font-medium">
+            <span>✓ {actionMessage}</span>
+            <button
+              onClick={() => setActionMessage("")}
+              className="text-emerald-600 hover:text-emerald-900 font-bold ml-4 text-lg leading-none"
+              aria-label="Dismiss banner"
+            >
+              &times;
+            </button>
           </div>
         )}
 
@@ -377,7 +384,7 @@ function AdminDashboard() {
         {/* Edit Property Modal */}
         {editingProperty && (
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 p-4">
-            <div className="w-full max-w-xl rounded-2xl bg-white p-6 shadow-xl border border-slate-200">
+            <div className="w-full max-w-xl max-h-[90vh] overflow-y-auto rounded-2xl bg-white p-6 shadow-xl border border-slate-200">
               <div className="flex items-center justify-between border-b border-slate-100 pb-3">
                 <h3 className="text-lg font-bold text-slate-900">
                   Edit Property: {editingProperty.title}
@@ -495,7 +502,7 @@ function AdminDashboard() {
         {/* Admin Review Modal */}
         {reviewModal && (
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 p-4">
-            <div className="w-full max-w-lg rounded-2xl bg-white p-6 shadow-xl border border-slate-200">
+            <div className="w-full max-w-lg max-h-[90vh] overflow-y-auto rounded-2xl bg-white p-6 shadow-xl border border-slate-200">
               <div className="flex items-center justify-between border-b border-slate-100 pb-3">
                 <h3 className="text-lg font-bold text-slate-900">
                   Review Application: {reviewModal.propertyTitle}

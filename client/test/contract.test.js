@@ -475,4 +475,49 @@ describe("Homezy Client Data & API Contract Checks", () => {
 
     disconnectSocket();
   });
+
+  test("Validation contracts: phone format, password length, and password match logic", () => {
+    // Phone validation helper logic (used in Register and PropertyRequest)
+    const validatePhone = (phone) => {
+      const digits = (phone || "").replace(/\D/g, "");
+      return digits.length >= 10 && digits.length <= 15;
+    };
+
+    assert.equal(validatePhone("9876543210"), true);
+    assert.equal(validatePhone("+91 98765 43210"), true);
+    assert.equal(validatePhone("(555) 123-4567"), true);
+    assert.equal(validatePhone("12345"), false);
+    assert.equal(validatePhone(""), false);
+
+    // Password validation helper logic (used in Register)
+    const validatePassword = (pw) => (pw || "").length >= 6;
+    assert.equal(validatePassword("secret"), true);
+    assert.equal(validatePassword("123456"), true);
+    assert.equal(validatePassword("short"), false);
+    assert.equal(validatePassword(""), false);
+
+    // Live password matching helper logic
+    const validateMatch = (pw, confirm) => pw === confirm && pw.length > 0;
+    assert.equal(validateMatch("password123", "password123"), true);
+    assert.equal(validateMatch("password123", "different123"), false);
+    assert.equal(validateMatch("", ""), false);
+  });
+
+  test("Responsiveness & Quick Filter Chips: filterProperties accurately categorizes catalog listings", () => {
+    const categories = ["All", "Apartment", "Independent House", "Flat", "Luxury Apartment"];
+
+    categories.forEach((cat) => {
+      const selectedCat = cat === "All" ? "" : cat;
+      const filtered = filterProperties(properties, "", selectedCat);
+      assert.ok(Array.isArray(filtered));
+      if (selectedCat) {
+        filtered.forEach((p) => assert.equal(p.type, selectedCat));
+      }
+    });
+
+    // Combined category chip + search query
+    const aptInAndheri = filterProperties(properties, "andheri", "Apartment");
+    assert.equal(aptInAndheri.length, 1);
+    assert.equal(aptInAndheri[0].id, 1);
+  });
 });

@@ -160,13 +160,13 @@ function RentalRequests() {
   const rejectedCount = requests.filter((r) => r.status === "Rejected").length;
 
   return (
-    <div className="min-h-screen bg-slate-50 px-6 py-10">
+    <div className="min-h-screen bg-slate-50 px-4 py-6 sm:px-6 sm:py-10">
       <div className="mx-auto max-w-6xl">
         {/* Header */}
         <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
           <div>
             <div className="flex items-center gap-3">
-              <h1 className="text-3xl font-bold text-slate-900">
+              <h1 className="text-2xl sm:text-3xl font-bold text-slate-900">
                 {isAdmin ? "Rental Applications Management" : "My Rental Applications"}
               </h1>
               <span
@@ -177,7 +177,7 @@ function RentalRequests() {
                 {user?.role} view
               </span>
             </div>
-            <p className="mt-1 text-slate-600">
+            <p className="mt-1 text-sm sm:text-base text-slate-600">
               {isAdmin
                 ? "Review, approve, and manage tenant rental requests across all Homezy properties."
                 : "Track the real-time review status, admin feedback, and manage your submitted applications."}
@@ -211,14 +211,28 @@ function RentalRequests() {
 
         {/* Notifications */}
         {actionSuccess && (
-          <div className="mt-6 rounded-xl bg-emerald-50 border border-emerald-200 p-4 text-emerald-800 font-medium">
-            ✓ {actionSuccess}
+          <div className="mt-6 flex items-center justify-between rounded-xl bg-emerald-50 border border-emerald-200 p-4 text-emerald-800 font-medium">
+            <span>✓ {actionSuccess}</span>
+            <button
+              onClick={() => setActionSuccess("")}
+              className="text-emerald-600 hover:text-emerald-900 font-bold ml-4 text-lg leading-none"
+              aria-label="Dismiss message"
+            >
+              &times;
+            </button>
           </div>
         )}
 
         {error && (
-          <div className="mt-6 rounded-xl bg-red-50 border border-red-200 p-4 text-red-700 font-medium">
-            {error}
+          <div className="mt-6 flex items-center justify-between rounded-xl bg-red-50 border border-red-200 p-4 text-red-700 font-medium">
+            <span>{error}</span>
+            <button
+              onClick={() => setError("")}
+              className="text-red-600 hover:text-red-900 font-bold ml-4 text-lg leading-none"
+              aria-label="Dismiss error"
+            >
+              &times;
+            </button>
           </div>
         )}
 
@@ -244,7 +258,7 @@ function RentalRequests() {
 
         {/* Search & Filter Controls */}
         <div className="mt-8 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-          <div className="flex flex-wrap items-center gap-2">
+          <div className="flex items-center gap-2 overflow-x-auto pb-1 text-xs sm:text-sm">
             {[
               { id: "all", label: "All", count: requests.length },
               { id: "pending", label: "Pending", count: pendingCount },
@@ -254,7 +268,7 @@ function RentalRequests() {
               <button
                 key={tab.id}
                 onClick={() => setFilter(tab.id)}
-                className={`rounded-lg px-4 py-2 text-sm font-semibold capitalize transition ${
+                className={`shrink-0 rounded-lg px-3.5 py-2 font-semibold capitalize transition ${
                   filter === tab.id
                     ? "bg-indigo-600 text-white shadow-sm"
                     : "bg-white text-slate-600 border border-slate-200 hover:bg-slate-50"
@@ -271,7 +285,7 @@ function RentalRequests() {
               placeholder="Search by property or tenant..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full rounded-lg border border-slate-300 bg-white px-3.5 py-2 text-sm outline-none focus:border-indigo-500"
+              className="w-full rounded-lg border border-slate-300 bg-white px-3.5 py-2 text-sm outline-none focus:border-indigo-500 shadow-sm"
             />
           </div>
         </div>
@@ -365,7 +379,7 @@ function RentalRequests() {
                     </div>
 
                     {/* Actions Column */}
-                    <div className="flex flex-row md:flex-col gap-2 shrink-0 self-end md:self-start">
+                    <div className="flex flex-wrap sm:flex-nowrap md:flex-col gap-2 shrink-0 self-end md:self-start w-full sm:w-auto justify-end">
                       {/* Tenant Actions */}
                       {!isAdmin && req.status === "Pending" && (
                         <button
@@ -414,7 +428,7 @@ function RentalRequests() {
         {/* Admin Review Modal */}
         {reviewModal && (
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 p-4">
-            <div className="w-full max-w-lg rounded-2xl bg-white p-6 shadow-xl border border-slate-200">
+            <div className="w-full max-w-lg max-h-[90vh] overflow-y-auto rounded-2xl bg-white p-6 shadow-xl border border-slate-200">
               <div className="flex items-center justify-between border-b border-slate-100 pb-3">
                 <h3 className="text-lg font-bold text-slate-900">
                   Review Application: {reviewModal.propertyTitle}
