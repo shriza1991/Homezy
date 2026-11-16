@@ -52,12 +52,12 @@ function Properties() {
               Available Rental Properties
             </h1>
             <p className="mt-1 text-sm sm:text-base text-slate-600">
-              Browse real property listings backed by MongoDB Atlas and managed through Homezy.
+              Explore rental homes across Mumbai and find a place that fits your lifestyle and budget.
             </p>
           </div>
           {loading && (
             <span className="self-start sm:self-auto rounded-full bg-indigo-50 border border-indigo-200 px-3 py-1 text-xs font-semibold text-indigo-700 animate-pulse">
-              Syncing with MongoDB...
+              Loading properties...
             </span>
           )}
         </div>

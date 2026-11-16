@@ -14,6 +14,7 @@
     "client:lint": "npm run lint --prefix client",
     "client:test": "npm test --prefix client",
     "test:demo": "node --test test/demoBrowser.test.js",
+    "test:docker": "node scripts/verify-docker.cjs",
     "test:all": "npm run server:test && npm run client:test && npm run test:demo",
     "test": "npm run server:test && npm run client:test && npm run test:demo"
   },
