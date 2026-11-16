@@ -138,7 +138,7 @@ function PropertyRequest() {
                 Request to Rent Property
               </h1>
               <p className="mt-1 text-xs sm:text-sm text-slate-600">
-                Submit an official tenancy application. Saved directly to MongoDB with real-time alerts.
+                Apply for your next home and receive updates as your application is reviewed.
               </p>
             </div>
             {!submittedData && (
@@ -188,10 +188,10 @@ function PropertyRequest() {
                 <span>✓</span> Rental Request Submitted Successfully
               </div>
               <p className="mt-2 text-xs sm:text-sm text-emerald-700">
-                Your rental application for <strong>{submittedData.propertyTitle}</strong> has been stored in MongoDB with status:{" "}
+                Your application for <strong>{submittedData.propertyTitle}</strong> has been submitted. Current status:{" "}
                 <span className="font-bold uppercase tracking-wider bg-emerald-200 text-emerald-900 px-2 py-0.5 rounded text-xs">
                   {submittedData.status}
-                </span>. Real-time notification was dispatched to the property administrator.
+                </span>. The property team has been notified.
               </p>
 
               <div className="mt-4 rounded-lg bg-white/80 p-4 text-xs text-slate-700 space-y-1.5 border border-emerald-100">
@@ -344,7 +344,7 @@ function PropertyRequest() {
                 disabled={loading}
                 className="w-full rounded-lg bg-indigo-600 px-4 py-3 text-sm font-bold text-white transition hover:bg-indigo-700 disabled:opacity-50 shadow-md"
               >
-                {loading ? "Submitting Application to MongoDB..." : "Submit Tenancy Application"}
+                {loading ? "Submitting Application..." : "Submit Tenancy Application"}
               </button>
             </form>
           )}

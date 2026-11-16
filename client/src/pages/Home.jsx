@@ -32,7 +32,7 @@ function Home() {
         </h1>
 
         <p className="mx-auto mt-4 max-w-2xl text-base text-slate-600 md:text-lg lg:text-xl">
-          Discover verified rental properties in Mumbai backed by MongoDB Atlas. Fast browsing, transparent pricing, and instant rental requests.
+          Find your next home in Mumbai. Explore rental properties, compare prices, and apply with ease.
         </p>
 
         <div className="mt-8 flex flex-wrap justify-center gap-4">

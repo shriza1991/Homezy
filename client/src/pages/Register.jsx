@@ -89,7 +89,7 @@ function Register() {
             <span className="text-3xl">✓</span>
             <h2 className="mt-2 font-bold text-lg text-emerald-800">Account Created Successfully!</h2>
             <p className="mt-1 text-xs text-emerald-700">
-              Your account has been registered in the database. You can now sign in to your dashboard.
+              Your account is ready. Sign in to access your dashboard.
             </p>
             <Link
               to="/login"

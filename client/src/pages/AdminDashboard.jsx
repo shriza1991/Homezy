@@ -86,7 +86,7 @@ function AdminDashboard() {
     setActionMessage("");
     try {
       await createProperty(newProp, token);
-      setActionMessage(`Property "${newProp.title}" created successfully in MongoDB!`);
+      setActionMessage(`Property "${newProp.title}" listed successfully.`);
       setNewProp({
         title: "",
         location: "",
@@ -285,7 +285,7 @@ function AdminDashboard() {
         {/* Add Property Form (Modal / Expandable) */}
         {showAddForm && (
           <div className="mt-6 rounded-xl border border-emerald-200 bg-white p-6 shadow-md">
-            <h2 className="text-xl font-bold text-slate-900 mb-4">Add New MongoDB Property Listing</h2>
+            <h2 className="text-xl font-bold text-slate-900 mb-4">Add New Property Listing</h2>
             <form onSubmit={handleCreateProperty} className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <div>
                 <label className="block text-sm font-medium text-slate-700 mb-1">Title</label>
@@ -374,7 +374,7 @@ function AdminDashboard() {
                   disabled={isSubmitting}
                   className="rounded-lg bg-emerald-600 px-6 py-2 font-semibold text-white hover:bg-emerald-700 disabled:opacity-50 text-sm"
                 >
-                  {isSubmitting ? "Creating..." : "Save to MongoDB"}
+                  {isSubmitting ? "Creating..." : "Save Listing"}
                 </button>
               </div>
             </form>
@@ -616,7 +616,7 @@ function AdminDashboard() {
           </div>
 
           <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
-            <p className="text-sm font-medium text-slate-500">MongoDB Properties</p>
+            <p className="text-sm font-medium text-slate-500">Property Listings</p>
             <p className="mt-2 text-3xl font-extrabold text-slate-900">
               {propertiesList.length}
             </p>
@@ -624,7 +624,7 @@ function AdminDashboard() {
           </div>
 
           <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
-            <p className="text-sm font-medium text-slate-500">Backend API Health</p>
+            <p className="text-sm font-medium text-slate-500">Service Status</p>
             <div className="mt-2 flex items-center gap-2">
               <span
                 className={`h-3 w-3 rounded-full ${healthStatus?.ok ? "bg-emerald-500" : "bg-amber-500"
@@ -635,7 +635,7 @@ function AdminDashboard() {
               </p>
             </div>
             <p className="mt-2 text-xs text-slate-500">
-              Database: {healthStatus?.data?.database?.status || "checked via API"}
+              Connection: {healthStatus?.data?.database?.status || "Status unavailable"}
             </p>
           </div>
         </div>
@@ -735,7 +735,7 @@ function AdminDashboard() {
             <div>
               <h2 className="text-lg font-bold text-slate-900">Property Catalog Management</h2>
               <p className="text-sm text-slate-500">
-                List, inspect, and manage properties stored in MongoDB
+                Add, review, and manage your property listings.
               </p>
             </div>
             <span className="text-xs font-semibold uppercase text-slate-400">
@@ -812,7 +812,7 @@ function AdminDashboard() {
                 ) : (
                   <tr>
                     <td colSpan="6" className="px-6 py-8 text-center text-slate-500">
-                      {loading ? "Loading properties from MongoDB..." : "No properties found."}
+                      {loading ? "Loading properties..." : "No properties found."}
                     </td>
                   </tr>
                 )}
@@ -826,7 +826,7 @@ function AdminDashboard() {
           <div className="border-b border-slate-200 px-6 py-4">
             <h2 className="text-lg font-bold text-slate-900">Platform User Directory</h2>
             <p className="text-sm text-slate-500">
-              Accounts authorized through Homezy JWT authentication
+              Manage account roles and access permissions.
             </p>
           </div>
 

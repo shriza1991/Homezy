@@ -124,7 +124,7 @@ function NotificationBell() {
                     ? "bg-amber-500"
                     : "bg-slate-400"
                 }`}
-                title={`Socket status: ${connectionStatus}`}
+                title={`Notification status: ${connectionStatus}`}
               />
             </div>
           </div>
